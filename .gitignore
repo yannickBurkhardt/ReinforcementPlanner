@@ -1,1 +1,3 @@
 Dockerfile-navrep
+*__pycache__*
+*.egg_info
