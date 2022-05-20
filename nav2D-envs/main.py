@@ -11,7 +11,8 @@ for _ in range(100):
     goal = observation['target']
     pos = observation['agent']
     direction = goal-pos
-    action = 5*np.int16(direction/np.amax(direction))
+    action = np.int16(10.0/np.linalg.norm(direction) * direction)
+    print(action)
     if done:
         observation, info = env.reset(return_info=True)
         print("Done!!!")
