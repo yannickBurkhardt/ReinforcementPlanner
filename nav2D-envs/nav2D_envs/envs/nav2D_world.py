@@ -22,16 +22,21 @@ class Nav2DWorldEnv(gym.Env):
         high_obs_p = np.array([size-1] * self.num_obstacles)
         low_obs_v = np.array([-self.max_vel] * self.num_obstacles) #360 degree scan to a max of 4.5 meters
         high_obs_v = np.array([self.max_vel] * self.num_obstacles)
+        low_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
+        high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
 
         """self.observation_space = spaces.Dict(
             {
                 "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
                 "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
                 "obstacles_pos": spaces.Box(low_obs_p, high_obs_p, dtype=np.int16),
-                "obstacles_vel": spaces.Box(low_obs_v, high_obs_v, dtype=np.int16)
+                "obstacles_vel": spaces.Box(low_obs_v, high_obs_v, dtype=np.int16),
+                "obstacles_size": spaces.Box(self.obs_min_size, self.obs_max_size, dtype=np.int16)
             }
         )"""
-        self.observation_space = spaces.Box(0, size - 1, shape=(2,), dtype=int)
+        low = np.hstack((np.array([0, 0]), low_obs_p, low_obs_v, low_obs_size))
+        high = np.hstack((np.array([size - 1, size - 1]), high_obs_p, high_obs_v, high_obs_size))
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         
@@ -76,7 +81,9 @@ class Nav2DWorldEnv(gym.Env):
 
     def _get_obs(self):
         #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
-        return self._agent_location
+        # TODO: Check dimensions
+        obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
+        return obs
 
     def _get_info(self):
         return {
