@@ -23,14 +23,15 @@ class Nav2DWorldEnv(gym.Env):
         low_obs_v = np.array([-self.max_vel] * self.num_obstacles) #360 degree scan to a max of 4.5 meters
         high_obs_v = np.array([self.max_vel] * self.num_obstacles)
 
-        self.observation_space = spaces.Dict(
+        """self.observation_space = spaces.Dict(
             {
                 "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
                 "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
                 "obstacles_pos": spaces.Box(low_obs_p, high_obs_p, dtype=np.int16),
                 "obstacles_vel": spaces.Box(low_obs_v, high_obs_v, dtype=np.int16)
             }
-        )
+        )"""
+        self.observation_space = spaces.Box(0, size - 1, shape=(2,), dtype=int)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         
@@ -74,7 +75,8 @@ class Nav2DWorldEnv(gym.Env):
         self.clock = None
 
     def _get_obs(self):
-        return {"agent": self._agent_location, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
+        #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
+        return self._agent_location
 
     def _get_info(self):
         return {
@@ -123,7 +125,7 @@ class Nav2DWorldEnv(gym.Env):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = action
         # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location += direction
+        self._agent_location += np.int64(direction)
         # self._agent_location = np.clip(
         #     self._agent_location, self.agent_size, self.size - self.agent_size
         # )
