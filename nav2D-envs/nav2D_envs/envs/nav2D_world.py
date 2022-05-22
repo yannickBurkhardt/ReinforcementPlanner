@@ -34,8 +34,8 @@ class Nav2DWorldEnv(gym.Env):
                 "obstacles_size": spaces.Box(self.obs_min_size, self.obs_max_size, dtype=np.int16)
             }
         )"""
-        low = np.hstack((np.array([0, 0]), low_obs_p, low_obs_v, low_obs_size))
-        high = np.hstack((np.array([size - 1, size - 1]), high_obs_p, high_obs_v, high_obs_size))
+        low = np.hstack((np.array([0, 0]), np.array([0, 0]), low_obs_p, low_obs_p, low_obs_v, low_obs_v, low_obs_size))
+        high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p, high_obs_v, high_obs_v, high_obs_size))
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
