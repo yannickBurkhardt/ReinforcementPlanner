@@ -155,14 +155,13 @@ class Nav2DWorldEnv(gym.Env):
 
         # An episode is done iff the agent has reached the target or crashed into an obstacle
         arrived_goal = np.linalg.norm(self._agent_location-self._target_location) < 2*self.agent_size
-        #check for collisions
+        # cCeck for collisions
         collision = False
         for i, obs in enumerate(self._obstacles_positions):
             if(np.linalg.norm(self._agent_location-obs) < (self.agent_size+self._obstacles_size[i])):
                 collision = True
-                print("collision!!")
                 break
-        # check for out of boundaries
+        # Check for out of boundaries
         if(self._agent_location[0] < self.agent_size or self._agent_location[0]>self.size - self.agent_size or 
                 self._agent_location[1] < self.agent_size or self._agent_location[1]>self.size - self.agent_size):
             collision = True
