@@ -8,9 +8,9 @@ action = np.random.randint(-1,1,size=(2,))
 for _ in range(100):
     env.render()
     observation, reward, done, info = env.step(action)
-    goal = observation#['target']
-    pos = observation#['agent']
-    direction = goal#-pos
+    pos = observation[:2] #['target']
+    goal = observation[2:4] #['agent']
+    direction = goal-pos
     action = np.int16(10.0/np.linalg.norm(direction) * direction)
     print(action)
     if done:

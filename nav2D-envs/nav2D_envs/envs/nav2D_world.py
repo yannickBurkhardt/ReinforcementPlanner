@@ -34,10 +34,18 @@ class Nav2DWorldEnv(gym.Env):
                 "obstacles_size": spaces.Box(self.obs_min_size, self.obs_max_size, dtype=np.int16)
             }
         )"""
-        low = np.hstack((np.array([0, 0]), np.array([0, 0]), low_obs_p, low_obs_p, low_obs_v, low_obs_v, low_obs_size))
-        high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p, high_obs_v, high_obs_v, high_obs_size))
+
+        # Observation space for static obstacles
+        low = np.hstack((np.array([0, 0]), np.array([0, 0]), low_obs_p, low_obs_p, low_obs_size))
+        high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p,
+                          high_obs_size))
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)
 
+        # Observation space for moving obstacles
+        """low = np.hstack((np.array([0, 0]), np.array([0, 0]), low_obs_p, low_obs_p, low_obs_v, low_obs_v, low_obs_size))
+        high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p, high_obs_v, high_obs_v, high_obs_size))
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)
+        """
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         
         # self.action_space = spaces.Discrete(8)
@@ -81,8 +89,12 @@ class Nav2DWorldEnv(gym.Env):
 
     def _get_obs(self):
         #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
-        # TODO: Check dimensions
-        obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
+        # Static obstacles
+        obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(),
+                         self._obstacles_size))
+
+        # Moving obstacles
+        # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
         return obs
 
     def _get_info(self):
@@ -118,11 +130,12 @@ class Nav2DWorldEnv(gym.Env):
             obstacles.append(obs_location)
         self._obstacles_positions = np.array(obstacles)
 
-        # Set obstacles velocities to 2
-        # self._obstacles_vels = np.zeros((self.num_obstacles,2))
-        self._obstacles_vels = self.np_random.integers(-self.max_vel, self.max_vel, size=(self.num_obstacles,2))
+        # Set obstacle velocities
+        # Static obstacles
+        self._obstacles_vels = np.zeros((self.num_obstacles,2))
 
-
+        # Moving obstacles
+        #self._obstacles_vels = self.np_random.integers(-self.max_vel, self.max_vel, size=(self.num_obstacles,2))
 
         observation = self._get_obs()
         info = self._get_info()
@@ -137,7 +150,7 @@ class Nav2DWorldEnv(gym.Env):
         #     self._agent_location, self.agent_size, self.size - self.agent_size
         # )
         # Move the obstacles
-        for i in range(self._obstacles_positions.shape[0]):
+        """for i in range(self._obstacles_positions.shape[0]):
             self._obstacles_vels[i] += np.random.randint(low=-1, high=1, size=(2,))
             self._obstacles_vels[i] = np.clip(self._obstacles_vels[i], -self.max_vel, self.max_vel)
             # self._obstacles_positions[i] = np.clip(self._obstacles_positions[i]+np.int16(self._obstacles_vels[i]), self.agent_size, self.size - self.agent_size)
@@ -151,6 +164,7 @@ class Nav2DWorldEnv(gym.Env):
                 self._obstacles_positions[i] = np.clip(self._obstacles_positions[i] + np.int16(self._obstacles_vels[i]), self._obstacles_size[i], self.size - self._obstacles_size[i])
             # print("pos: {}".format(self._obstacles_positions[i]))
             # print("vel: {}".format(self._obstacles_vels[i]))
+        """
 
 
         # An episode is done iff the agent has reached the target or crashed into an obstacle
