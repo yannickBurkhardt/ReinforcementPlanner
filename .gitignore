@@ -2,3 +2,8 @@ Dockerfile-navrep
 *__pycache__*
 *.egg_info
 rlkit/data/*
+google-cloud-sdk
+*.pth
+*.npy
+*.npz
+*.ipynb_checkpoints*

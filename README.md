@@ -14,3 +14,7 @@
     ```bash
     source run_docker.sh 
     ```
+
+pip install -e nav2D-envs/
+pip install -e rlkit/
+jupyter lab --ip=0.0.0.0 --port=8888 --allow-root --no-browser

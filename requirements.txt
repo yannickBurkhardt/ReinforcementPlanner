@@ -3,3 +3,21 @@ matplotlib
 opencv-python
 gym==0.23.1
 pygame==2.1.0
+
+#rlkit
+cython
+ipython
+joblib
+lockfile
+mako
+matplotlib
+mkl
+numba
+# path.py
+# pybox2d
+
+scipy
+cloudpickle
+gitpython
+gtimer
+ipdb

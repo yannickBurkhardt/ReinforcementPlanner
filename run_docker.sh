@@ -10,6 +10,8 @@ docker run -it --rm  \
     -v $XSOCK:$XSOCK \
     -v $HOME/.Xauthority:/root/.Xauthority \
     -v `pwd`/nav2D-envs:/usr/src/app/nav2D-envs \
+    -v `pwd`/rlkit:/usr/src/app/rlkit \
+    -v `pwd`/rl:/usr/src/app/rl \
     --shm-size 8G \
     reinforcement_planning "$@"
 
