@@ -34,4 +34,4 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH=/usr/src/app/nav2D-envs/:/usr/src/app/rlkit/:/usr/src/app/rl/
 
-WORKDIR /usr/src/app
+COPY .bashrc /root/.bashrc
