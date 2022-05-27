@@ -40,8 +40,10 @@
 
 
 ## Run (Needs nvidia-docker and the right Nvidia GPU drivers)
-    ```bash
-    source run_docker.sh 
-    ```
+```bash
+source run_docker.sh 
+```
+
+
 
 
