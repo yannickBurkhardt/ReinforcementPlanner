@@ -27,17 +27,17 @@
     python -m pip install requirements.txt
     ```
 
-3. Install further packages
+4. Install pytorch
+    ```bash
+    pip install --no-cache-dir torch==1.10.0+cu113 torchvision==0.11.0+cu113 torchaudio==0.10.0 -f https://download.pytorch.org/whl/torch_stable.html
+    ```
+
+5. Install further packages
     ```bash
     python -m pip install -e nav2D-envs/
     python -m pip install -e rlkit/
     ```
 
-
-
-1.
-
-sudo env "PATH=$PATH" conda update conda
 
 ## Run (Needs nvidia-docker and the right Nvidia GPU drivers)
     ```bash
