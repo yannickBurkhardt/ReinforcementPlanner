@@ -9,12 +9,13 @@ from rlkit.torch.networks import ConcatMlp
 from rlkit.torch.sac.policies import MakeDeterministic, TanhGaussianPolicy
 from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
-
+from rlkit.envs.wrappers import NormalizedBoxEnv
+from nav2D_envs.envs import nav2D_world
 
 def experiment(variant):
     # unwrap the TimeLimitEnv wrapper since we manually termiante after 50 steps
-    eval_env = gym.make('FetchReach-v1').env
-    expl_env = gym.make('FetchReach-v1').env
+    eval_env = NormalizedBoxEnv(nav2D_world.Nav2DWorldEnv())
+    expl_env = NormalizedBoxEnv(nav2D_world.Nav2DWorldEnv())
 
     observation_key = 'observation'
     desired_goal_key = 'desired_goal'

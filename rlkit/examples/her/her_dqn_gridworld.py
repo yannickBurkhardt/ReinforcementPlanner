@@ -20,21 +20,16 @@ from rlkit.torch.her.her import HERTrainer
 from rlkit.torch.networks import ConcatMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
-try:
-    import multiworld.envs.gridworlds
-except ImportError as e:
-    print("To run this example, you need to install `multiworld`. See "
-          "https://github.com/vitchyr/multiworld.")
-    raise e
-
+from rlkit.envs.wrappers import NormalizedBoxEnv
+from nav2D_envs.envs import nav2D_world
 
 def experiment(variant):
-    expl_env = gym.make('GoalGridworld-v0')
-    eval_env = gym.make('GoalGridworld-v0')
+    eval_env = NormalizedBoxEnv(nav2D_world.Nav2DWorldEnv())
+    expl_env = NormalizedBoxEnv(nav2D_world.Nav2DWorldEnv())
 
     obs_dim = expl_env.observation_space.spaces['observation'].low.size
     goal_dim = expl_env.observation_space.spaces['desired_goal'].low.size
-    action_dim = expl_env.action_space.n
+    action_dim = expl_env.action_space.low.size
     qf = ConcatMlp(
         input_size=obs_dim + goal_dim,
         output_size=action_dim,
