@@ -20,6 +20,8 @@ import torch
 from rlkit.core.tabulate import tabulate
 from collections import OrderedDict
 
+from torch.utils.tensorboard import SummaryWriter
+
 def add_prefix(log_dict: OrderedDict, prefix: str, divider=''):
     with_prefix = OrderedDict()
     for key, val in log_dict.items():
@@ -106,6 +108,8 @@ class Logger(object):
         self._header_printed = False
         self.table_printer = TerminalTablePrinter()
 
+        self.tensorboard_logger = None
+
     def reset(self):
         self.__init__()
 
@@ -189,13 +193,29 @@ class Logger(object):
     def record_tabular(self, key, val):
         self._tabular.append((self._tabular_prefix_str + str(key), str(val)))
 
-    def record_dict(self, d, prefix=None):
+    def record_dict(self, d, epoch=None, prefix=None):
         if prefix is not None:
             self.push_tabular_prefix(prefix)
+            self.record_tensorboard(d, epoch, prefix)
         for k, v in d.items():
             self.record_tabular(k, v)
         if prefix is not None:
             self.pop_tabular_prefix()
+
+    def record_tensorboard(self, d, epoch, prefix):
+        if epoch is None:
+            raise ValueError('Please provide "epoch" parameter.')
+        self.tensorboard_logger = SummaryWriter(
+            os.path.join(self._snapshot_dir, 'tensorboard'))
+
+        for k, v in d.items():
+            k = str(k)
+            k = k.replace(" ", "_")
+            idx = k.rfind("_")
+            if idx >= 0:
+                k = k[:idx] + "/" + k[idx + 1:]
+            self.tensorboard_logger.add_scalar(
+                f"{prefix}{k}", v, global_step=epoch)
 
     def push_tabular_prefix(self, key):
         self._tabular_prefixes.append(key)

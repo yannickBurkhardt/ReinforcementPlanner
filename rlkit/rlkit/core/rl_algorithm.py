@@ -89,29 +89,33 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         """
         logger.record_dict(
             self.replay_buffer.get_diagnostics(),
+            epoch=epoch,
             prefix='replay_buffer/'
         )
 
         """
         Trainer
         """
-        logger.record_dict(self.trainer.get_diagnostics(), prefix='trainer/')
+        logger.record_dict(self.trainer.get_diagnostics(), epoch=epoch, prefix='trainer/')
 
         """
         Exploration
         """
         logger.record_dict(
             self.expl_data_collector.get_diagnostics(),
+            epoch=epoch,
             prefix='expl/'
         )
         expl_paths = self.expl_data_collector.get_epoch_paths()
         if hasattr(self.expl_env, 'get_diagnostics'):
             logger.record_dict(
                 self.expl_env.get_diagnostics(expl_paths),
+                epoch=epoch,
                 prefix='expl/',
             )
         logger.record_dict(
             eval_util.get_generic_path_information(expl_paths),
+            epoch=epoch,
             prefix="expl/",
         )
         """
@@ -119,16 +123,19 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         """
         logger.record_dict(
             self.eval_data_collector.get_diagnostics(),
+            epoch=epoch,
             prefix='eval/',
         )
         eval_paths = self.eval_data_collector.get_epoch_paths()
         if hasattr(self.eval_env, 'get_diagnostics'):
             logger.record_dict(
                 self.eval_env.get_diagnostics(eval_paths),
+                epoch=epoch,
                 prefix='eval/',
             )
         logger.record_dict(
             eval_util.get_generic_path_information(eval_paths),
+            epoch=epoch,
             prefix="eval/",
         )
 
