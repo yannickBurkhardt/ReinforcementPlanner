@@ -8,12 +8,13 @@ action = np.random.randint(-1,1,size=(2,))
 for _ in range(100):
     env.render(mode="human") #env.render(mode="rgb_array")
     observation, reward, done, info = env.step(action)
-    goal = observation[2:4]#['target']
-    pos = observation[:2]#['agent']
+    goal = observation['desired_goal']
+    pos = observation['achieved_goal'][:2]
 
     direction = goal-pos
-    action = np.int16(10.0/np.linalg.norm(direction) * direction)
+    action = direction/np.linalg.norm(direction)/256*10
     print(action)
+    print(observation)
     if done:
         observation, info = env.reset(return_info=True)
         print("Done!!!")

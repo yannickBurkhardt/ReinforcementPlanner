@@ -37,8 +37,8 @@ def multitask_rollout(
         preprocess_obs_for_policy_fn=obs_processor,
         full_o_postprocess_func=wrapped_fun,
     )
-    if not return_dict_obs:
-        paths['observations'] = paths['observations'][observation_key]
+    #if not return_dict_obs:
+    #    paths['observations'] = paths['observations'][observation_key]
     return paths
 
 
