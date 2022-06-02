@@ -7,23 +7,23 @@ import numpy as np
 class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, size=512):
+    def __init__(self, size=256):
         self.size = size  # The size of the square grid
-        self.window_size = 512  # The size of the PyGame window
+        self.window_size = size  # The size of the PyGame window
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-        self.num_obstacles = 5
-        self.max_vel = 20
+        self.num_obstacles = 1
+        self.max_vel = 1
         self.agent_size = 20
         self.obs_min_size = 5
         self.obs_max_size = 40
         low_obs_p = np.array([0] * self.num_obstacles) #360 degree scan to a max of 4.5 meters
         high_obs_p = np.array([size-1] * self.num_obstacles)
-        low_obs_v = np.array([-self.max_vel] * self.num_obstacles) #360 degree scan to a max of 4.5 meters
-        high_obs_v = np.array([self.max_vel] * self.num_obstacles)
-        low_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
-        high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
+        #low_obs_v = np.array([-self.max_vel] * self.num_obstacles) #360 degree scan to a max of 4.5 meters
+        #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
+        #low_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
+        #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
         self.num_steps = 0;
 
         """self.observation_space = spaces.Dict(
@@ -44,9 +44,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((low_obs_p, low_obs_p, low_obs_size))
-        high = np.hstack((high_obs_p, high_obs_p,
-                          high_obs_size))
+        low = np.hstack((np.array([0, 0]), low_obs_p, low_obs_p))
+        high = np.hstack((np.array([size - 1, size - 1]), high_obs_p, high_obs_p))
         self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.int16),
@@ -63,7 +62,6 @@ class Nav2DWorldEnv(gym.Env):
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         # self.action_space = spaces.Box(0, 4, shape=(1,), dtype=np.int16)
         self.action_space = spaces.Box(np.array([-self.max_vel]*2),np.array([self.max_vel]*2), dtype=np.int16)
-
 
 
         """
@@ -107,9 +105,18 @@ class Nav2DWorldEnv(gym.Env):
         """obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(),
                          self._obstacles_size))"""
 
+        # Calculate relative observations
+        dir_goal = self._target_location - self._agent_location
+
+        dir_obs = np.zeros((self.num_obstacles, 2))
+        for i in range(self._obstacles_positions.shape[0]):
+            dir_obs[i] = self._obstacles_positions - self._agent_location
+            # Find collision point
+            dir_obs[i] -= dir_obs[i] / np.linalg.norm(dir_obs[i]) * (self.agent_size + self._obstacles_size)
+
         # For examples/her/her_sac_gym_fetch_reach.py
         obs = {
-            'observation': np.hstack((self._obstacles_positions.flatten(), self._obstacles_size)),
+            'observation': np.hstack((dir_goal, dir_obs.flatten())),
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }
@@ -164,7 +171,7 @@ class Nav2DWorldEnv(gym.Env):
 
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
-        direction = action
+        direction = 5*action
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += np.int64(direction)
         # self._agent_location = np.clip(
@@ -209,10 +216,10 @@ class Nav2DWorldEnv(gym.Env):
         # Sparse Reward
         if arrived_goal:
             reward = 1
-        elif collision:
-            reward = -1
-        elif max_steps_reached:
-            reward = -1
+        #elif collision:
+        #    reward = -1
+        #elif max_steps_reached:
+        #    reward = -1
         else:
             reward = 0
         observation = self._get_obs()
@@ -225,10 +232,8 @@ class Nav2DWorldEnv(gym.Env):
         return observation, reward, done, info
 
     def compute_reward(self, archieved_goal, desired_goal, info):
-        if (np.linalg.norm(archieved_goal - desired_goal) < 200):
-            return 1
-        else:
-            return -1
+        # Normalize distance to desired goal
+        return 1 #(1 - np.linalg.norm(archieved_goal - desired_goal) / 724)
 
     def render(self, mode="human"):
         if self.window is None and mode == "human":
