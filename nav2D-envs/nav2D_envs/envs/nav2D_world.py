@@ -7,13 +7,13 @@ import numpy as np
 class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, size=256):
+    def __init__(self, size=512):
         self.size = size  # The size of the square grid
         self.window_size = size  # The size of the PyGame window
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-        self.num_obstacles = 1
+        self.num_obstacles = 10
         self.max_vel = 10 / self.size
         self.agent_size = 20 / self.size
         self.obs_min_size = 5 / self.size
@@ -110,9 +110,9 @@ class Nav2DWorldEnv(gym.Env):
 
         dir_obs = np.zeros((self.num_obstacles, 2))
         for i in range(self._obstacles_positions.shape[0]):
-            dir_obs[i] = self._obstacles_positions - self._agent_location
+            dir_obs[i] = self._obstacles_positions[i] - self._agent_location
             # Find collision point
-            dir_obs[i] -= dir_obs[i] / np.linalg.norm(dir_obs[i]) * (self.agent_size + self._obstacles_size / self.size)
+            dir_obs[i] -= dir_obs[i] / np.linalg.norm(dir_obs[i]) * (self.agent_size + self._obstacles_size[i] / self.size)
 
         # For examples/her/her_sac_gym_fetch_reach.py
         obs = {
@@ -153,7 +153,7 @@ class Nav2DWorldEnv(gym.Env):
         obstacles = []
         for i in range(self.num_obstacles):
             obs_location = self._agent_location
-            while((np.linalg.norm(obs_location - self._agent_location) < (self.agent_size + self._obstacles_size[i])) or (np.linalg.norm(obs_location - self._target_location) < (self.agent_size + self._obstacles_size[i]))):
+            while((np.linalg.norm(obs_location - self._agent_location) < 2*(self.agent_size + self._obstacles_size[i])) or (np.linalg.norm(obs_location - self._target_location) < 2*(self.agent_size + self._obstacles_size[i]))):
                 obs_location = self.np_random.uniform(-1.0, 1.0, size=2)
             obstacles.append(obs_location)
         self._obstacles_positions = np.array(obstacles)
@@ -200,7 +200,7 @@ class Nav2DWorldEnv(gym.Env):
         # Check for collisions
         collision = False
         for i, obs in enumerate(self._obstacles_positions):
-            if(np.linalg.norm(self._agent_location-obs) < (self.agent_size+self._obstacles_size[i])):
+            if(np.linalg.norm(self._agent_location-obs) < 2*(self.agent_size+self._obstacles_size[i])):
                 collision = True
                 break
         # Check for out of boundaries
@@ -262,16 +262,16 @@ class Nav2DWorldEnv(gym.Env):
         pygame.draw.circle(
             canvas,
             (0, 0, 255),
-            ((self._agent_location+1.0)/2*self.size + 0.5),
+            ((self._agent_location+1.0)/2*self.size),
             pix_square_size,
         )
 
         # Finally, add obstacles
-        for i, obs_pos in enumerate((self._obstacles_positions+1.0)/2*self.size):
+        for i, obs_pos in enumerate(self._obstacles_positions):
             pygame.draw.circle(
             canvas,
             (255, 0, 0),
-            (obs_pos),
+            ((obs_pos+1.0)/2*self.size),
             self._obstacles_size[i]*self.size,
         )
 
