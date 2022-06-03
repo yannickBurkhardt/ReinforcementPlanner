@@ -15,8 +15,6 @@ from nav2D_envs.envs import nav2D_world
 def experiment(variant):
     expl_env = NormalizedBoxEnv(nav2D_world.Nav2DWorldEnv())
     eval_env = NormalizedBoxEnv(nav2D_world.Nav2DWorldEnv())
-    expl_env.set_steps_to_obs_increase(0)
-    eval_env.set_steps_to_obs_increase(1)
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
