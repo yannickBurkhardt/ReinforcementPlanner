@@ -25,6 +25,8 @@ class Nav2DWorldEnv(gym.Env):
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
         self.num_steps = 0
+        self.num_steps_overall = 0
+        self.num_obs_train = 1
 
         """self.observation_space = spaces.Dict(
             {
@@ -44,20 +46,20 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0])))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0])))
-        self.observation_space = spaces.Dict(
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]*self.num_obstacles)))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]*self.num_obstacles)))
+        """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
                 'desired_goal': spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32),
                 'achieved_goal': spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32)
             }
-        )
+        )"""
 
         # Observation space for moving obstacles
         """low = np.hstack((np.array([0, 0]), np.array([0, 0]), low_obs_p, low_obs_p, low_obs_v, low_obs_v, low_obs_size))
-        high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p, high_obs_v, high_obs_v, high_obs_size))
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
+        high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p, high_obs_v, high_obs_v, high_obs_size))"""
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         # self.action_space = spaces.Box(0, 4, shape=(1,), dtype=np.int16)
@@ -99,6 +101,15 @@ class Nav2DWorldEnv(gym.Env):
         self.window = None
         self.clock = None
 
+    def set_steps_to_obs_increase(self, eval):
+        # Set number of steps after number of obstacles is increased
+        if eval:
+            # Evaluation
+            self.increase_num_obs = 200*5000
+        else:
+            # Exploration
+            self.increase_num_obs = 200*1000
+
     def _get_obs(self):
         #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
         # Static obstacles
@@ -115,11 +126,12 @@ class Nav2DWorldEnv(gym.Env):
             dir_obs[i] -= dir_obs[i] / np.linalg.norm(dir_obs[i]) * (self.agent_size + self._obstacles_size[i] / self.size)
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        obs = {
+        """obs = {
             'observation': np.hstack((dir_goal, dir_obs.flatten())),
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
-        }
+        }"""
+        obs = np.hstack((dir_goal, dir_obs.flatten()))
 
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
@@ -199,8 +211,8 @@ class Nav2DWorldEnv(gym.Env):
         arrived_goal = np.linalg.norm(self._agent_location-self._target_location) < 2*self.agent_size
         # Check for collisions
         collision = False
-        for i, obs in enumerate(self._obstacles_positions):
-            if(np.linalg.norm(self._agent_location-obs) < 2*(self.agent_size+self._obstacles_size[i])):
+        for i in range(self.num_obs_train):
+            if(np.linalg.norm(self._agent_location-self._obstacles_positions[i]) < 2*(self.agent_size+self._obstacles_size[i])):
                 collision = True
                 break
         # Check for out of boundaries
@@ -209,6 +221,7 @@ class Nav2DWorldEnv(gym.Env):
             collision = True
         # Check if max. number of steps is reached
         self.num_steps += 1
+        self.num_steps_overall += 1
         max_steps_reached = False
         if self.num_steps >= 500:
             max_steps_reached = True
@@ -225,6 +238,13 @@ class Nav2DWorldEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
         done = arrived_goal or collision or max_steps_reached
+
+        # Increase number of considered obstacles after specified number of steps
+        self.num_obs_train = min(np.int32(self.num_steps_overall / self.increase_num_obs) + 1, 10)
+
+        if (self.num_steps_overall % (self.increase_num_obs / 200)) == 0:
+            print("Epoch:" + str(self.num_steps_overall / (self.increase_num_obs / 200)))
+            print("Number of Obstacles considered: " + str(self.num_obs_train))
 
         # Reset steps
         if done:
