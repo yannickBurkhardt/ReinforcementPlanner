@@ -44,8 +44,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0])))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0])))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), np.array([-2.0, -2.0])))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), np.array([2.0, 2.0])))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -108,15 +108,19 @@ class Nav2DWorldEnv(gym.Env):
         # Calculate relative observations
         dir_goal = self._target_location - self._agent_location
 
+        num_obs_considered = 2
         dir_obs = np.zeros((2))
-        dir_obs_closest = 2*np.ones((2))
+        dir_obs_closest = 2*np.ones((2, num_obs_considered))
         for i in range(self._obstacles_positions.shape[0]):
             dir_obs = self._obstacles_positions[i] - self._agent_location
             # Find collision point
             dir_obs -= dir_obs / np.linalg.norm(dir_obs) * (self.agent_size + self._obstacles_size[i] / self.size)
-            # Save obstacle with shortest distance
-            if np.linalg.norm(dir_obs) < np.linalg.norm(dir_obs_closest):
-                dir_obs_closest = dir_obs
+            # Save obstacles with shortest distance
+            for j in range(num_obs_considered-1, -1, -1):
+                if np.linalg.norm(dir_obs) < np.linalg.norm(dir_obs_closest[j]):
+                    if j+1 < num_obs_considered:
+                        dir_obs_closest[j+1] = dir_obs_closest[j]
+                    dir_obs_closest[j] = dir_obs
 
         # For examples/her/her_sac_gym_fetch_reach.py
         """obs = {
