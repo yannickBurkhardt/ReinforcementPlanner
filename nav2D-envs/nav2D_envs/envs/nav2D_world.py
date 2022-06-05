@@ -24,6 +24,7 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
+        self.velocity = np.array([0.0, 0.0])
         self.num_steps = 0
 
         """self.observation_space = spaces.Dict(
@@ -44,8 +45,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), np.array([-2.0, -2.0])))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), np.array([2.0, 2.0])))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), np.array([-self.max_vel]*2)))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), np.array([self.max_vel]*2)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -108,19 +109,15 @@ class Nav2DWorldEnv(gym.Env):
         # Calculate relative observations
         dir_goal = self._target_location - self._agent_location
 
-        num_obs_considered = 2
         dir_obs = np.zeros((2))
-        dir_obs_closest = 2*np.ones((2, num_obs_considered))
+        dir_obs_closest = 2*np.ones((2))
         for i in range(self._obstacles_positions.shape[0]):
             dir_obs = self._obstacles_positions[i] - self._agent_location
             # Find collision point
             dir_obs -= dir_obs / np.linalg.norm(dir_obs) * (self.agent_size + self._obstacles_size[i] / self.size)
-            # Save obstacles with shortest distance
-            for j in range(num_obs_considered-1, -1, -1):
-                if np.linalg.norm(dir_obs) < np.linalg.norm(dir_obs_closest[j]):
-                    if j+1 < num_obs_considered:
-                        dir_obs_closest[j+1] = dir_obs_closest[j]
-                    dir_obs_closest[j] = dir_obs
+            # Save obstacle with shortest distance
+            if np.linalg.norm(dir_obs) < np.linalg.norm(dir_obs_closest):
+                dir_obs_closest = dir_obs
 
         # For examples/her/her_sac_gym_fetch_reach.py
         """obs = {
@@ -128,7 +125,8 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
-        obs = np.hstack((dir_goal, dir_obs_closest.flatten()))
+
+        obs = np.hstack((dir_goal, dir_obs_closest, self.velocity))
 
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
@@ -181,6 +179,7 @@ class Nav2DWorldEnv(gym.Env):
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = action
+        self.velocity = action
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += direction
         # self._agent_location = np.clip(
@@ -238,6 +237,7 @@ class Nav2DWorldEnv(gym.Env):
         # Reset steps
         if done:
             self.num_steps = 0
+            self.velocity = np.array([0, 0])
         return observation, reward, done, info
 
     def compute_reward(self, archieved_goal, desired_goal, info):
