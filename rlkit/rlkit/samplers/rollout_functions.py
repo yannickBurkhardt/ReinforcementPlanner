@@ -25,7 +25,7 @@ def multitask_rollout(
         wrapped_fun = None
 
     def obs_processor(o):
-        return np.hstack((o[observation_key], o[desired_goal_key]))
+        return o #np.hstack((o[observation_key], o[desired_goal_key]))
 
     paths = rollout(
         env,

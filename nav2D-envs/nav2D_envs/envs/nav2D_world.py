@@ -144,14 +144,14 @@ class Nav2DWorldEnv(gym.Env):
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.uniform(-1.0, 1.0, size=2)
+        self._agent_location = self.np_random.uniform(-1.0+1.0/self.size, 1.0-1.0/self.size, size=2)
         # self._agent_location = np.array([self.size,0])
 
 
         # We will sample the target's location randomly until it does not coincide with the agent's location
         self._target_location = self._agent_location
         while np.linalg.norm(self._target_location - self._agent_location) < 2.0 * self.agent_size:
-            self._target_location = self.np_random.uniform(-1.0, 1.0, size=2)
+            self._target_location = self.np_random.uniform(-1.0+1.0/self.size, 1.0-1.0/self.size, size=2)
 
         # Sample the obstacles' radius randomly
         self._obstacles_size = self.np_random.uniform(self.obs_min_size, self.obs_max_size, size=self.num_obstacles)
@@ -258,6 +258,23 @@ class Nav2DWorldEnv(gym.Env):
             self.agent_size*self.size
         )  # The size of a single grid square in pixels
 
+        # Finally, add some gridlines
+        for x in range(self.size + 1):
+            pygame.draw.line(
+                canvas,
+                0,
+                (0, 512/8 * x),
+                (self.window_size, 512/8 * x),
+                width=3,
+            )
+            pygame.draw.line(
+                canvas,
+                0,
+                (512/8 * x, 0),
+                (512/8 * x, self.window_size),
+                width=3,
+            )
+
         # First we draw the target
         pygame.draw.rect(
             canvas,
@@ -283,23 +300,6 @@ class Nav2DWorldEnv(gym.Env):
             ((obs_pos+1.0)/2*self.size),
             self._obstacles_size[i]*self.size,
         )
-
-         # Finally, add some gridlines
-        for x in range(self.size + 1):
-            pygame.draw.line(
-                canvas,
-                0,
-                (0, 50 * x),
-                (self.window_size, 50 * x),
-                width=3,
-            )
-            pygame.draw.line(
-                canvas,
-                0,
-                (50 * x, 0),
-                (50 * x, self.window_size),
-                width=3,
-            )
 
         if mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
