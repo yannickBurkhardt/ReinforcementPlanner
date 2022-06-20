@@ -109,19 +109,14 @@ class Nav2DWorldEnv(gym.Env):
 
         # Calculate relative observations
         dir_goal = self._target_location - self._agent_location
+        dir_obs = self._obstacles_positions - self._agent_location
+        # Find collision point
+        dir_obs -= dir_obs / np.linalg.norm(dir_obs, axis=1)[:, np.newaxis] * (self.agent_size + self._obstacles_size)[:, np.newaxis]
 
-        dir_obs = np.zeros((2))
-        dir_obs_closest = 2*np.ones((2, self.num_obs_considered))
-        for i in range(self._obstacles_positions.shape[0]):
-            dir_obs = self._obstacles_positions[i] - self._agent_location
-            # Find collision point
-            dir_obs -= dir_obs / np.linalg.norm(dir_obs) * (self.agent_size + self._obstacles_size[i] / self.size)
-            # Save obstacles with shortest distance
-            for j in range(self.num_obs_considered-1, -1, -1):
-                if np.linalg.norm(dir_obs) < np.linalg.norm(dir_obs_closest[:,j]):
-                    if j+1 < self.num_obs_considered:
-                        dir_obs_closest[:,j+1] = dir_obs_closest[:,j]
-                    dir_obs_closest[:,j] = dir_obs
+        # Sort by norm
+        sortidxs = np.argsort(np.linalg.norm(dir_obs, axis=-1))
+        dir_obs_sorted = dir_obs[sortidxs, np.arange(dir_obs.shape[1])[:,None]]
+        dir_obs_closest = dir_obs_sorted.T[:self.num_obs_considered]
 
         # For examples/her/her_sac_gym_fetch_reach.py
         """obs = {
@@ -210,10 +205,9 @@ class Nav2DWorldEnv(gym.Env):
         arrived_goal = np.linalg.norm(self._agent_location-self._target_location) < 2*self.agent_size
         # Check for collisions
         collision = False
-        for i, obs in enumerate(self._obstacles_positions):
-            if(np.linalg.norm(self._agent_location-obs) < 2*(self.agent_size+self._obstacles_size[i])):
-                collision = True
-                break
+        if(any(np.linalg.norm(self._agent_location - self._obstacles_positions, axis=1) < 2 * (self.agent_size + self._obstacles_size))):
+            collision = True
+
         # Check for out of boundaries
         if(self._agent_location[0] < -1.0 + self.agent_size or self._agent_location[0] > 1.0 - self.agent_size or
                 self._agent_location[1] < -1.0 - self.agent_size or self._agent_location[1] > 1.0 - self.agent_size):
