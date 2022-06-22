@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Nav2DWorldEnv(gym.Env):
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 16}
 
     def __init__(self, size=512):
         self.size = size  # The size of the square grid

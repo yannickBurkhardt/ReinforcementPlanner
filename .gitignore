@@ -7,3 +7,5 @@ google-cloud-sdk
 *.npy
 *.npz
 *.ipynb_checkpoints*
+banana_RL
+rl
