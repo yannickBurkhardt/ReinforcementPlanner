@@ -36,7 +36,7 @@ replay_buffer_kwargs=dict(
     )
 
 # Define Environment and Model
-env = gym.make('nav2D_envs/Nav2DWorld-v0')
+env = gym.make('nav2D_envs/Nav2DWorld-v0', dict_obs_space=True)
 model = SAC("MultiInputPolicy", env, train_freq=8, replay_buffer_class=HerReplayBuffer, replay_buffer_kwargs = replay_buffer_kwargs, tensorboard_log=experiment_dir,verbose=1)
 
 # Train and Save

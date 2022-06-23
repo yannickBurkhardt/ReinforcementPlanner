@@ -3,20 +3,18 @@ from gym import spaces
 import pygame
 import numpy as np
 
-DICT_OBS_SPACE = True
-# class Nav2DWorldEnv(gym.Env):
-
 class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 16}
 
-    def __init__(self, size=512):
+    def __init__(self, size=512, dict_obs_space=False):
+        self.dict_obs_space = dict_obs_space
         self.size = size  # The size of the square grid
         self.window_size = size  # The size of the PyGame window
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
         self.num_obstacles = 10
-        self.num_obs_considered = 5
+        self.num_obs_considered = 10
         self.max_vel = 10 / self.size
         self.agent_size = 20 / self.size
         self.obs_min_size = 5 / self.size
@@ -61,7 +59,7 @@ class Nav2DWorldEnv(gym.Env):
         # Observation space for moving obstacles
         """low = np.hstack((np.array([0, 0]), np.array([0, 0]), low_obs_p, low_obs_p, low_obs_v, low_obs_v, low_obs_size))
         high = np.hstack((np.array([size - 1, size - 1]), np.array([size - 1, size - 1]), high_obs_p, high_obs_p, high_obs_v, high_obs_v, high_obs_size))"""
-        if(DICT_OBS_SPACE): # For HER
+        if(self.dict_obs_space): # For HER
             self.observation_space = spaces.Dict(
                 {
                     'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -136,7 +134,7 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
-        if DICT_OBS_SPACE:
+        if self.dict_obs_space:
             obs = {
                 'observation': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
                 'achieved_goal': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),

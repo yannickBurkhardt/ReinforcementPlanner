@@ -29,7 +29,7 @@ env = gym.make('nav2D_envs/Nav2DWorld-v0')
 model = SAC("MlpPolicy", env, train_freq=8, tensorboard_log=experiment_dir,verbose=1)
 
 # Train and Save
-model.learn(total_timesteps=2000000, log_interval=10)
+model.learn(total_timesteps=4000000, log_interval=10)
 model.save(experiment_dir+"/sac_nav")
 
 del model # remove to demonstrate saving and loading
