@@ -30,6 +30,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir torch==1.10.0+cu113 torchvision==0.11.0+cu113 torchaudio==0.10.0 -f https://download.pytorch.org/whl/torch_stable.html
 
+# Install stable baselines
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get install -y cmake \
+    libopenmpi-dev \
+    zlib1g-dev \
+    && apt-get -y clean all \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH=/usr/src/app/nav2D-envs/:/usr/src/app/rlkit/:/usr/src/app/rl/

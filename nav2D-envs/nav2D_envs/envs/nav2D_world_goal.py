@@ -4,9 +4,8 @@ import pygame
 import numpy as np
 
 DICT_OBS_SPACE = True
-# class Nav2DWorldEnv(gym.Env):
 
-class Nav2DWorldEnv(gym.Env):
+class Nav2DWorldEnv(gym.GoalEnv):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 16}
 
     def __init__(self, size=512):
@@ -138,12 +137,13 @@ class Nav2DWorldEnv(gym.Env):
         }"""
         if DICT_OBS_SPACE:
             obs = {
-                'observation': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
-                'achieved_goal': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
-                'desired_goal': np.hstack((agent_location, np.array([0.0,0.0]), dir_obs_closest.flatten(),self.velocity)),
+                'observation': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten())),
+                'achieved_goal': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten())),
+                'desired_goal': np.hstack((self._target_location/self.size-0.5, np.array([0.0,0.0]), dir_obs_closest.flatten())),
             }
         else:
             obs = np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
+
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
         return obs
@@ -154,12 +154,6 @@ class Nav2DWorldEnv(gym.Env):
                 self._agent_location - self._target_location, ord=1
             )
         }
-    
-    def compute_reward(self, achieved_goal, desired_goal, info):
-        # Normalize distance to desired goal
-        if np.linalg.norm(achieved_goal-desired_goal) < 2*self.agent_size:
-            return 1.0
-        return 0.0
 
     def reset(self, seed=None, return_info=False, options=None):
         # We need the following line to seed self.np_random
@@ -260,6 +254,10 @@ class Nav2DWorldEnv(gym.Env):
             self.num_steps = 0
             self.velocity = np.array([0, 0])
         return observation, reward, done, info
+
+    def compute_reward(self, archieved_goal, desired_goal, info):
+        # Normalize distance to desired goal
+        return 1 #(1 - np.linalg.norm(archieved_goal - desired_goal) / 724)
 
     def render(self, mode="human"):
         if self.window is None and mode == "human":

@@ -8,4 +8,5 @@ google-cloud-sdk
 *.npz
 *.ipynb_checkpoints*
 banana_RL
-rl
+rl/experiments/*
+rl/old
