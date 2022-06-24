@@ -100,7 +100,7 @@ class Logger(object):
         self._tabular_fds = {}
         self._tabular_header_written = set()
 
-        self._snapshot_dir = None
+        self._snapshot_dir = 'data/name-of-experiment/name-of-experiment_2022_06_22_09_57_09_0000--s-0' #None
         self._snapshot_mode = 'all'
         self._snapshot_gap = 1
 

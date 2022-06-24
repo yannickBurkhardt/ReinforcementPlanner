@@ -101,12 +101,12 @@ if __name__ == "__main__":
             discount=0.99,
             soft_target_tau=5e-3,
             target_update_period=1,
-            policy_lr=3E-4,
-            qf_lr=3E-4,
+            policy_lr=3E-5,
+            qf_lr=3E-5,
             reward_scale=1,
             use_automatic_entropy_tuning=True,
         ),
     )
     setup_logger('name-of-experiment', variant=variant)
-    ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    ptu.set_gpu_mode(False)  # optionally set the GPU (default=False)
     experiment(variant)
