@@ -47,8 +47,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([self.max_vel]*2)))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, -self.max_vel*np.ones((self.num_planning_steps, 2)).flatten()))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, self.max_vel*np.ones((self.num_planning_steps, 2)).flatten()))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -64,7 +64,7 @@ class Nav2DWorldEnv(gym.Env):
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         # self.action_space = spaces.Box(0, 4, shape=(1,), dtype=np.int16)
-        self.action_space = spaces.Box(-self.max_vel*np.ones((self.num_planning_steps, 2)), self.max_vel*np.ones((self.num_planning_steps, 2)), dtype=np.float32)
+        self.action_space = spaces.Box(-self.max_vel*np.ones((self.num_planning_steps*2)), self.max_vel*np.ones((self.num_planning_steps*2)), dtype=np.float32)
 
 
         """
@@ -177,7 +177,7 @@ class Nav2DWorldEnv(gym.Env):
 
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
-        direction = action[0]
+        direction = action[:2]
         self.action_planned = action
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += direction
