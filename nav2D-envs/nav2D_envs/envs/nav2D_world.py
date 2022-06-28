@@ -14,7 +14,7 @@ class Nav2DWorldEnv(gym.Env):
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
         self.num_obstacles = 10
-        self.num_obs_considered = 5
+        self.num_obs_considered = 3
         self.max_vel = 10 / self.size
         self.agent_size = 20 / self.size
         self.obs_min_size = 5 / self.size
@@ -25,8 +25,7 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
-        self.num_planning_steps = 5
-        self.action_planned = np.zeros((self.num_planning_steps, 2))
+        self.velocity = np.array([0.0, 0.0])
         self.num_steps = 0
 
         """self.observation_space = spaces.Dict(
@@ -47,8 +46,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, -self.max_vel*np.ones((self.num_planning_steps, 2)).flatten()))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, self.max_vel*np.ones((self.num_planning_steps, 2)).flatten()))
+        low = np.hstack((np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
+        high = np.hstack((np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -64,8 +63,7 @@ class Nav2DWorldEnv(gym.Env):
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         # self.action_space = spaces.Box(0, 4, shape=(1,), dtype=np.int16)
-        self.action_space = spaces.Box(-self.max_vel*np.ones((self.num_planning_steps*2)), self.max_vel*np.ones((self.num_planning_steps*2)), dtype=np.float32)
-
+        self.action_space = spaces.Box(np.array([-self.max_vel]*2), np.array([self.max_vel]*2), dtype=np.float32)
 
         """
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -125,7 +123,7 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
-        obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.action_planned.flatten()))
+        obs = np.hstack((dir_goal, dir_obs_closest.flatten(), self.velocity))
 
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
@@ -143,7 +141,7 @@ class Nav2DWorldEnv(gym.Env):
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.uniform(-0.9, 0.9, size=2)
+        self._agent_location = self.np_random.uniform(-1.0, 1.0, size=2)
         # self._agent_location = np.array([self.size,0])
 
 
@@ -177,8 +175,8 @@ class Nav2DWorldEnv(gym.Env):
 
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
-        direction = action[:2]
-        self.action_planned = action
+        direction = action
+        self.velocity = action
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += direction
         # self._agent_location = np.clip(
