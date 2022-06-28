@@ -14,7 +14,7 @@ class Nav2DWorldEnv(gym.Env):
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
         self.num_obstacles = 10
-        self.num_obs_considered = 3
+        self.num_obs_considered = 5
         self.max_vel = 10 / self.size
         self.agent_size = 20 / self.size
         self.obs_min_size = 5 / self.size
@@ -27,6 +27,7 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
         self.velocity = np.array([0.0, 0.0])
         self.num_steps = 0
+        self.path = []
 
         """self.observation_space = spaces.Dict(
             {
@@ -46,8 +47,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
-        high = np.hstack((np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -123,7 +124,7 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
-        obs = np.hstack((dir_goal, dir_obs_closest.flatten(), self.velocity))
+        obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
 
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
@@ -141,8 +142,9 @@ class Nav2DWorldEnv(gym.Env):
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.uniform(-1.0, 1.0, size=2)
+        self._agent_location = self.np_random.uniform(-0.9, 0.9, size=2)
         # self._agent_location = np.array([self.size,0])
+        self.path = [self._agent_location]
 
 
         # We will sample the target's location randomly until it does not coincide with the agent's location
@@ -179,6 +181,7 @@ class Nav2DWorldEnv(gym.Env):
         self.velocity = action
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += direction
+        self.path.append(self._agent_location.copy())
         # self._agent_location = np.clip(
         #     self._agent_location, self.agent_size, self.size - self.agent_size
         # )
@@ -264,12 +267,13 @@ class Nav2DWorldEnv(gym.Env):
             ),
         )
         # Now we draw the agent
-        pygame.draw.circle(
-            canvas,
-            (0, 0, 255),
-            ((self._agent_location+1.0)/2*self.size),
-            pix_square_size,
-        )
+        for pos in self.path:
+            pygame.draw.circle(
+                canvas,
+                (0, 0, 255),
+                ((pos+1.0)/2*self.size),
+                pix_square_size,
+            )
 
         # Finally, add obstacles
         for i, obs_pos in enumerate(self._obstacles_positions):
