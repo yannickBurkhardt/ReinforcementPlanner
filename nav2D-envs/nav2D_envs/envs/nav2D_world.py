@@ -25,7 +25,8 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
-        self.velocity = np.array([0.0, 0.0])
+        self.memory = 5
+        self.velocity = np.zeros((self.memory, 2))
         self.num_steps = 0
         self.path = []
 
@@ -47,8 +48,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*5)))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*5)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -124,7 +125,7 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
-        obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
+        obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity.flatten()))
 
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
@@ -145,6 +146,7 @@ class Nav2DWorldEnv(gym.Env):
         self._agent_location = self.np_random.uniform(-0.9, 0.9, size=2)
         # self._agent_location = np.array([self.size,0])
         self.path = [self._agent_location]
+        self.velocity = self.velocity = np.zeros((self.memory, 2))
 
 
         # We will sample the target's location randomly until it does not coincide with the agent's location
@@ -178,7 +180,8 @@ class Nav2DWorldEnv(gym.Env):
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = action
-        self.velocity = action
+        self.velocity[:-1] = self.velocity[1:]
+        self.velocity[-1] = action
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += direction
         self.path.append(self._agent_location.copy())
@@ -236,7 +239,6 @@ class Nav2DWorldEnv(gym.Env):
         # Reset steps
         if done:
             self.num_steps = 0
-            self.velocity = np.array([0, 0])
         return observation, reward, done, info
 
     def compute_reward(self, archieved_goal, desired_goal, info):
