@@ -25,7 +25,7 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
-        self.memory = 5
+        self.memory = 10
         self.velocity = np.zeros((self.memory, 2))
         self.num_steps = 0
         self.path = []
@@ -48,8 +48,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*5)))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*5)))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*self.memory)))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*self.memory)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
