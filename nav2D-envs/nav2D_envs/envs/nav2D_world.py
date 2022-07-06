@@ -14,7 +14,7 @@ class Nav2DWorldEnv(gym.Env):
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
         self.num_obstacles = 10
-        self.num_obs_considered = 5
+        self.num_obs_considered = 10
         self.max_vel = 10 / self.size
         self.agent_size = 20 / self.size
         self.obs_min_size = 5 / self.size
@@ -163,11 +163,8 @@ class Nav2DWorldEnv(gym.Env):
             obs_location = self._agent_location
             # Calculate line between agent and target
             target_dir = self._target_location - self._agent_location
-            print(self._target_location)
-            print(self._agent_location)
             while((np.linalg.norm(obs_location - self._agent_location) < 2*(self.agent_size + self._obstacles_size[i])) or (np.linalg.norm(obs_location - self._target_location) < 2*(self.agent_size + self._obstacles_size[i]))):
                 obs_location = self._agent_location + self.np_random.uniform(0.0, 1.0, size=1) * target_dir
-                print(obs_location)
                 obs_location = obs_location + self.np_random.normal(scale=0.3, size=2)
                 obs_location = np.clip(obs_location, -1.0, 1.0)
             obstacles.append(obs_location)
