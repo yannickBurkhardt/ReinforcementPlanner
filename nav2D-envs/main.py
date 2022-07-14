@@ -1,3 +1,4 @@
+import nav2D_envs
 import gym
 import numpy as np
 

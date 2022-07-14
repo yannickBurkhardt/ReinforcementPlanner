@@ -8,6 +8,8 @@ class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(self, size=512):
+        self.difficult_scenario = False  # Sample obstacles between agent and goal
+
         self.size = size  # The size of the square grid
         self.window_size = size  # The size of the PyGame window
 
@@ -104,10 +106,21 @@ class Nav2DWorldEnv(gym.Env):
         obstacles = []
         for i in range(self.num_obstacles):
             obs_location = self.agent_location
+
+            # Calculate line between agent and target
+            target_dir = self.target_location - self.agent_location
             while ((np.linalg.norm(obs_location - self.agent_location) < 2 * (self.agent_size + self.obstacles_size[i]))
                    or (np.linalg.norm(obs_location - self.target_location) <
                        2 * (self.agent_size + self.obstacles_size[i]))):
-                obs_location = self.np_random.uniform(-1.0, 1.0, size=2)
+
+                if self.difficult_scenario:
+                    # Gaussian sampling of obstacles along line between agent and goal
+                    obs_location = self.agent_location + self.np_random.uniform(0.0, 1.0, size=1) * target_dir
+                    obs_location = obs_location + self.np_random.normal(scale=0.3, size=2)
+                    obs_location = np.clip(obs_location, -1.0, 1.0)
+                else:
+                    # Uniform sampling of obstacles
+                    obs_location = self.np_random.uniform(-1.0, 1.0, size=2)
             obstacles.append(obs_location)
         self.obstacles_positions = np.array(obstacles)
 
