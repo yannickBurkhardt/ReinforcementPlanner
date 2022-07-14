@@ -14,6 +14,7 @@ for _ in range(100):
 
     direction = observation[2:4]
     action = direction/np.linalg.norm(direction)/256*10
+    print(observation)
     if done:
         observation, info = env.reset(return_info=True)
         action = np.zeros(2)

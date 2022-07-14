@@ -25,10 +25,9 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
-        self.memory = 50
+        self.memory = 10
         self.velocity = np.zeros((self.memory, 2))
         self.num_steps = 0
-        self.last_punished = 0
         self.path = []
 
         """self.observation_space = spaces.Dict(
@@ -49,8 +48,8 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*10)))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*10)))
+        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*self.memory)))
+        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*self.memory)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -126,7 +125,7 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
-        obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity[:10].flatten()))
+        obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity.flatten()))
 
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
@@ -178,8 +177,6 @@ class Nav2DWorldEnv(gym.Env):
         # Moving obstacles
         #self._obstacles_vels = self.np_random.integers(-self.max_vel, self.max_vel, size=(self.num_obstacles,2))
 
-        self.last_punished = 0
-
         observation = self._get_obs()
         info = self._get_info()
         return (observation, info) if return_info else observation
@@ -230,18 +227,15 @@ class Nav2DWorldEnv(gym.Env):
         if self.num_steps >= 500:
             max_steps_reached = True
 
-        reward = 0
-
-        # Punish if there was little progress in the last 50 steps
-        if self.num_steps - self.last_punished >= 50:
-            if np.linalg.norm(np.mean(self.velocity, axis=0)) < 0.005:
-                reward = -0.1
-                self.last_punished = self.num_steps
-
         # Sparse Reward
         if arrived_goal:
             reward = 1
-
+        #elif collision:
+        #    reward = -1
+        #elif max_steps_reached:
+        #    reward = -1
+        else:
+            reward = 0
         observation = self._get_obs()
         info = self._get_info()
         done = arrived_goal or collision or max_steps_reached
