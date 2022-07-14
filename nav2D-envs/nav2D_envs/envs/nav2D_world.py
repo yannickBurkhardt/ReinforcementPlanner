@@ -162,11 +162,12 @@ class Nav2DWorldEnv(gym.Env):
         obstacles = []
         for i in range(self.num_obstacles):
             obs_location = self._agent_location
-            while ((np.linalg.norm(obs_location - self._agent_location) < 2 * (
-                    self.agent_size + self._obstacles_size[i])) or (
-                           np.linalg.norm(obs_location - self._target_location) < 2 * (
-                           self.agent_size + self._obstacles_size[i]))):
-                obs_location = self.np_random.uniform(-1.0, 1.0, size=2)
+            # Calculate line between agent and target
+            target_dir = self._target_location - self._agent_location
+            while((np.linalg.norm(obs_location - self._agent_location) < 2*(self.agent_size + self._obstacles_size[i])) or (np.linalg.norm(obs_location - self._target_location) < 2*(self.agent_size + self._obstacles_size[i]))):
+                obs_location = self._agent_location + self.np_random.uniform(0.0, 1.0, size=1) * target_dir
+                obs_location = obs_location + self.np_random.normal(scale=0.3, size=2)
+                obs_location = np.clip(obs_location, -1.0, 1.0)
             obstacles.append(obs_location)
         self._obstacles_positions = np.array(obstacles)
 
