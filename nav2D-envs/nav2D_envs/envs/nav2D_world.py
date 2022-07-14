@@ -144,6 +144,9 @@ class Nav2DWorldEnv(gym.Env):
         # Apply noise to action
         action += self.np_random.normal(scale=self.variance_action_noise, size=action.size)
 
+        # Make sure to not exceed maximal velocity
+        action = np.clip(action, -self.max_vel, self.max_vel)
+
         # Update list with previous actions
         self.previous_actions[:-1] = self.previous_actions[1:]
         self.previous_actions[-1] = action
