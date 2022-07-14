@@ -8,7 +8,10 @@ class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(self, size=512):
+        # Optional settings
         self.difficult_scenario = False  # Sample obstacles between agent and goal
+        self.variance_observation_noise = 0.01  # Set variance of Gaussian noise on observations (0 is no noise)
+        self.variance_action_noise = 0.01  # Set variance of Gaussian noise on actions (0 is no noise)
 
         self.size = size  # The size of the square grid
         self.window_size = size  # The size of the PyGame window
@@ -71,8 +74,16 @@ class Nav2DWorldEnv(gym.Env):
         dir_obs_closest = dir_obs_sorted.T[:self.num_obs_considered]
 
         # Update observations (Agent position, relative goal position, relative obstacle positions, previous actions)
-        obs = np.hstack((self.agent_location, dir_goal, dir_obs_closest.flatten(), self.previous_actions.flatten()))
-        return obs
+        observation = np.hstack((self.agent_location, dir_goal, dir_obs_closest.flatten(),
+                                 self.previous_actions.flatten()))
+
+        # Add Gaussian noise to agent position, goal position and obstacle positions
+        num_noisy_elements = (4 + 2 * self.num_obs_considered)
+        noise = np.zeros(observation.size)
+        noise[:num_noisy_elements] = self.np_random.normal(scale=self.variance_observation_noise,
+                                                           size=num_noisy_elements)
+        observation += noise
+        return observation
 
     def _get_info(self):
         return {
@@ -130,6 +141,9 @@ class Nav2DWorldEnv(gym.Env):
         return (observation, info) if return_info else observation
 
     def step(self, action):
+        # Apply noise to action
+        action += self.np_random.normal(scale=self.variance_action_noise, size=action.size)
+
         # Update list with previous actions
         self.previous_actions[:-1] = self.previous_actions[1:]
         self.previous_actions[-1] = action
