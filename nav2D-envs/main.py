@@ -14,12 +14,13 @@ for _ in range(100):
     #goal = observation['desired_goal']
     #pos = observation['achieved_goal'][:2]
     rewards += reward
-    direction = observation[:2]
+    direction = observation[2:4]
     action = direction/np.linalg.norm(direction)*env.max_vel
     if done:
         print("\rreward: {}".format(rewards))
         rewards=0.0
         observation, info = env.reset(return_info=True)
+        print(observation.shape)
         print("Done!!!")
 
 env.close()

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from stable_baselines3 import SAC,HerReplayBuffer
 # from stable_baselines3.common.envs import BitFlippingEnv
-
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 
 # Get Experiment path where all files will be saved
 TRAIN_OUT_DIR = 'experiments/'
@@ -34,10 +34,12 @@ replay_buffer_kwargs=dict(
         online_sampling=online_sampling,
         max_episode_length=max_episode_length,
     )
+#Noise
+action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(2), sigma=0.1 * np.ones(2))
 
 # Define Environment and Model
 env = gym.make('nav2D_envs/Nav2DWorld-v0', dict_obs_space=True)
-model = SAC("MultiInputPolicy", env, train_freq=8, replay_buffer_class=HerReplayBuffer, replay_buffer_kwargs = replay_buffer_kwargs, tensorboard_log=experiment_dir,verbose=1)
+model = SAC("MultiInputPolicy", env, train_freq=8, replay_buffer_class=HerReplayBuffer, replay_buffer_kwargs = replay_buffer_kwargs, tensorboard_log=experiment_dir,verbose=1, action_noise=action_noise)
 
 # Train and Save
 model.learn(total_timesteps=2000000, log_interval=10)

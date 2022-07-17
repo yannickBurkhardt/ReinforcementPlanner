@@ -2,27 +2,28 @@ import gym
 from gym import spaces
 import pygame
 import numpy as np
+from configs import config
 
 class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 16}
 
     def __init__(self, size=512, dict_obs_space=False):
+        self.dynamic_obstacles = config.ENV.DYNAMIC_OBSTACLES
         self.dict_obs_space = dict_obs_space
         self.size = size  # The size of the square grid
         self.window_size = size  # The size of the PyGame window
-
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-        self.num_obstacles = 10
-        self.num_obs_considered = 10
-        self.max_vel = 10 / self.size
+        self.num_obstacles = config.ENV.TOTAL_OBSTACLES
+        self.num_obs_considered = config.ENV.SEEN_OBSTACLES
+        self.max_vel = config.ENV.MAX_VEL / self.size
         self.agent_size = 20 / self.size
         self.obs_min_size = 5 / self.size
         self.obs_max_size = 40 / self.size
         low_obs_p = np.array([-2.0] * 2 * self.num_obs_considered)
         high_obs_p = np.array([2.0] * 2 * self.num_obs_considered)
-        #low_obs_v = np.array([-self.max_vel] * self.num_obstacles) #360 degree scan to a max of 4.5 meters
-        #high_obs_v = np.array([self.max_vel] * self.num_obstacles)
+        low_obs_v = np.array([-self.max_vel] * 2 * self.num_obs_considered) #360 degree scan to a max of 4.5 meters
+        high_obs_v = np.array([self.max_vel] * 2 * self.num_obs_considered)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
         self.velocity = np.array([0.0, 0.0])
@@ -46,8 +47,12 @@ class Nav2DWorldEnv(gym.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.int16)"""
 
         # For examples/her/her_sac_gym_fetch_reach.py
-        low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
-        high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
+        if self.dynamic_obstacles:
+            low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, low_obs_v, np.array([-self.max_vel]*2)))
+            high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, high_obs_v, np.array([-self.max_vel]*2)))
+        else:
+            low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
+            high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -109,6 +114,7 @@ class Nav2DWorldEnv(gym.Env):
         """
         self.window = None
         self.clock = None
+        print("Created envirnoment with {} from which {} are seen by the agent".format(self.num_obstacles, self.num_obs_considered))
 
     def _get_obs(self):
         #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
@@ -121,13 +127,14 @@ class Nav2DWorldEnv(gym.Env):
         dir_goal = self._target_location - self._agent_location
         dir_obs = self._obstacles_positions - self._agent_location
         # Find collision point
-        dir_obs -= dir_obs / np.linalg.norm(dir_obs, axis=1)[:, np.newaxis] * (self.agent_size + self._obstacles_size)[:, np.newaxis]
 
+        dir_obs -= dir_obs / np.linalg.norm(dir_obs, axis=1)[:, np.newaxis] * (self.agent_size + self._obstacles_size)[:, np.newaxis]
         # Sort by norm
         sortidxs = np.argsort(np.linalg.norm(dir_obs, axis=-1))
         dir_obs_sorted = dir_obs[sortidxs, np.arange(dir_obs.shape[1])[:,None]]
         dir_obs_closest = dir_obs_sorted.T[:self.num_obs_considered]
-
+        vels_sorted = self._obstacles_vels[sortidxs, np.arange(dir_obs.shape[1])[:,None]]
+        vels_sorted = vels_sorted.T[:self.num_obs_considered]
         # For examples/her/her_sac_gym_fetch_reach.py
         """obs = {
             'observation': np.hstack((dir_goal, dir_obs.flatten())),
@@ -141,7 +148,10 @@ class Nav2DWorldEnv(gym.Env):
                 'desired_goal': np.hstack((agent_location, np.array([0.0,0.0]), dir_obs_closest.flatten(),self.velocity)),
             }
         else:
-            obs = np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
+            if self.dynamic_obstacles:
+                obs = np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),self.velocity))
+            else:
+                obs = np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
         return obs
@@ -187,10 +197,12 @@ class Nav2DWorldEnv(gym.Env):
 
         # Set obstacle velocities
         # Static obstacles
-        self._obstacles_vels = np.zeros((self.num_obstacles,2))
+        if self.dynamic_obstacles:
+            self._obstacles_vels = self.np_random.uniform(-self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, size=(self.num_obstacles,2))
+        else:
+            self._obstacles_vels = np.zeros((self.num_obstacles,2))
 
         # Moving obstacles
-        #self._obstacles_vels = self.np_random.integers(-self.max_vel, self.max_vel, size=(self.num_obstacles,2))
 
         observation = self._get_obs()
         info = self._get_info()
@@ -206,22 +218,18 @@ class Nav2DWorldEnv(gym.Env):
         #     self._agent_location, self.agent_size, self.size - self.agent_size
         # )
         # Move the obstacles
-        """for i in range(self._obstacles_positions.shape[0]):
-            self._obstacles_vels[i] += np.random.randint(low=-1, high=1, size=(2,))
-            self._obstacles_vels[i] = np.clip(self._obstacles_vels[i], -self.max_vel, self.max_vel)
-            # self._obstacles_positions[i] = np.clip(self._obstacles_positions[i]+np.int16(self._obstacles_vels[i]), self.agent_size, self.size - self.agent_size)
-            self._obstacles_positions[i] += np.int16(self._obstacles_vels[i])
-
-            if(self._obstacles_positions[i][0] < self._obstacles_size[i] or self._obstacles_positions[i][0]>self.size - self._obstacles_size[i]):
-                self._obstacles_vels[i][0] *= -1
-                self._obstacles_positions[i] = np.clip(self._obstacles_positions[i] + np.int16(self._obstacles_vels[i]), self._obstacles_size[i], self.size - self._obstacles_size[i])
-            if(self._obstacles_positions[i][1] < self._obstacles_size[i] or self._obstacles_positions[i][1]>self.size - self._obstacles_size[i]):
-                self._obstacles_vels[i][1] *= -1
-                self._obstacles_positions[i] = np.clip(self._obstacles_positions[i] + np.int16(self._obstacles_vels[i]), self._obstacles_size[i], self.size - self._obstacles_size[i])
-            # print("pos: {}".format(self._obstacles_positions[i]))
-            # print("vel: {}".format(self._obstacles_vels[i]))
-        """
-
+        if self.dynamic_obstacles:
+            for i in range(self._obstacles_positions.shape[0]):
+                self._obstacles_vels[i] += self.np_random.uniform(-self.max_vel*0.01, self.max_vel*0.01, size=(2,))
+                self._obstacles_vels[i] = np.clip(self._obstacles_vels[i], -self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR)
+                # self._obstacles_positions[i] = np.clip(self._obstacles_positions[i]+np.int16(self._obstacles_vels[i]), self.agent_size, self.size - self.agent_size)
+                self._obstacles_positions[i] += self._obstacles_vels[i]
+                if(self._obstacles_positions[i][0] < -1 + self._obstacles_size[i]/self.size or self._obstacles_positions[i][0]>1.0 - self._obstacles_size[i]/self.size):
+                    self._obstacles_vels[i][0] *= -1
+                    # self._obstacles_positions[i] = np.clip(self._obstacles_positions[i] + np.int16(self._obstacles_vels[i]), self._obstacles_size[i], self.size - self._obstacles_size[i])
+                if(self._obstacles_positions[i][1] < -1 + self._obstacles_size[i]/self.size or self._obstacles_positions[i][1]>1.0 - self._obstacles_size[i]/self.size):
+                    self._obstacles_vels[i][1] *= -1
+                    # self._obstacles_positions[i] = np.clip(self._obstacles_positions[i] + np.int16(self._obstacles_vels[i]), self._obstacles_size[i], self.size - self._obstacles_size[i])
 
         # An episode is done iff the agent has reached the target or crashed into an obstacle
         arrived_goal = np.linalg.norm(self._agent_location-self._target_location) < 2*self.agent_size
@@ -242,10 +250,10 @@ class Nav2DWorldEnv(gym.Env):
 
         # Sparse Reward
         if arrived_goal:
-            reward = 1
-        #elif collision:
-        #    reward = -1
-        #elif max_steps_reached:
+            reward = config.ENV.GOAL_REWARD
+        elif collision:
+           reward = config.ENV.CRASH_REWARD
+        # elif max_steps_reached:
         #    reward = -1
         else:
             reward = 0

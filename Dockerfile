@@ -41,5 +41,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH=/usr/src/app/nav2D-envs/:/usr/src/app/rlkit/:/usr/src/app/rl/
-
+RUN pip install yacs
 COPY .bashrc /root/.bashrc
