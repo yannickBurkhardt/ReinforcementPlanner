@@ -18,8 +18,10 @@ class Nav2DWorldEnv(gym.Env):
         self.num_obs_considered = config.ENV.SEEN_OBSTACLES
         self.max_vel = config.ENV.MAX_VEL / self.size
         self.agent_size = 20 / self.size
-        self.obs_min_size = 5 / self.size
-        self.obs_max_size = 40 / self.size
+        self.obs_min_size = config.ENV.OBS_MIN_SIZE / self.size
+        self.obs_max_size = config.ENV.OBS_MAX_SIZE / self.size
+        self.variance_observation_noise = config.ENV.VARIANCE_OBSERVATION_NOISE
+        self.variance_action_noise = config.ENV.VARIANCE_ACTION_NOISE
         low_obs_p = np.array([-2.0] * 2 * self.num_obs_considered)
         high_obs_p = np.array([2.0] * 2 * self.num_obs_considered)
         low_obs_v = np.array([-self.max_vel] * 2 * self.num_obs_considered) #360 degree scan to a max of 4.5 meters
@@ -114,8 +116,8 @@ class Nav2DWorldEnv(gym.Env):
         """
         self.window = None
         self.clock = None
-        print("Created envirnoment with {} from which {} are seen by the agent".format(self.num_obstacles, self.num_obs_considered))
-
+        print("Created envirnoment with {} obstacles from which {} are seen by the agent".format(self.num_obstacles, self.num_obs_considered))
+        print("Noise variances are: {} and {}".format(self.variance_action_noise, self.variance_observation_noise))
     def _get_obs(self):
         #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
         # Static obstacles
@@ -123,7 +125,6 @@ class Nav2DWorldEnv(gym.Env):
                          self._obstacles_size))"""
 
         # Calculate relative observations
-        agent_location = self._agent_location/self.size-0.5
         dir_goal = self._target_location - self._agent_location
         dir_obs = self._obstacles_positions - self._agent_location
         # Find collision point
@@ -141,19 +142,27 @@ class Nav2DWorldEnv(gym.Env):
             'achieved_goal': self._agent_location,
             'desired_goal': self._target_location
         }"""
+        
         if self.dict_obs_space:
             obs = {
-                'observation': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
-                'achieved_goal': np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
-                'desired_goal': np.hstack((agent_location, np.array([0.0,0.0]), dir_obs_closest.flatten(),self.velocity)),
+                'observation': np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
+                'achieved_goal': np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity)),
+                'desired_goal': np.hstack((self._agent_location, np.array([0.0,0.0]), dir_obs_closest.flatten(),self.velocity)),
             }
         else:
             if self.dynamic_obstacles:
-                obs = np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),self.velocity))
+                obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),self.velocity))
             else:
-                obs = np.hstack((agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
+                obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
+        
+        # Add Gaussian noise to agent position, goal position and obstacle positions
+        num_noisy_elements = obs.shape[0]
+        noise = np.zeros(obs.size)
+        noise[:num_noisy_elements] = self.np_random.normal(scale=self.variance_observation_noise,
+                                                           size=num_noisy_elements)
+        obs += noise
         return obs
 
     def _get_info(self):
@@ -209,11 +218,11 @@ class Nav2DWorldEnv(gym.Env):
         return (observation, info) if return_info else observation
 
     def step(self, action):
-        # Map the action (element of {0,1,2,3}) to the direction we walk in
-        direction = action
-        self.velocity = action
+        
+        # Current velocity measurement is equal to the action plus some measurement noise
+        self.velocity = action 
         # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location += direction
+        self._agent_location += action + self.np_random.normal(scale=self.variance_action_noise, size=action.size)
         # self._agent_location = np.clip(
         #     self._agent_location, self.agent_size, self.size - self.agent_size
         # )
