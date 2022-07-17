@@ -223,11 +223,16 @@ class Nav2DWorldEnv(gym.Env):
         self.velocity = action 
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location += action + self.np_random.normal(scale=self.variance_action_noise, size=action.size)
-        # self._agent_location = np.clip(
-        #     self._agent_location, self.agent_size, self.size - self.agent_size
-        # )
+
         # Move the obstacles
         if self.dynamic_obstacles:
+            #Mixed scenario
+            if config.ENV.STEPS_MODE_SCENARIO > 0:
+                if self.num_steps % config.ENV.STEPS_MODE_SCENARIO == 0 and self.num_steps > 1:
+                    self._obstacles_vels = self.np_random.uniform(-self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, size=(self.num_obstacles,2))
+                    is_obstacle_moving = np.float32(np.expand_dims(self.np_random.randint(0,2,size=self.num_obstacles),axis=1))
+                    self._obstacles_vels = self._obstacles_vels * np.concatenate((is_obstacle_moving, is_obstacle_moving), axis=1)
+
             for i in range(self._obstacles_positions.shape[0]):
                 self._obstacles_vels[i] += self.np_random.uniform(-self.max_vel*0.01, self.max_vel*0.01, size=(2,))
                 self._obstacles_vels[i] = np.clip(self._obstacles_vels[i], -self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR)
@@ -251,19 +256,18 @@ class Nav2DWorldEnv(gym.Env):
         if(self._agent_location[0] < -1.0 + self.agent_size or self._agent_location[0] > 1.0 - self.agent_size or
                 self._agent_location[1] < -1.0 - self.agent_size or self._agent_location[1] > 1.0 - self.agent_size):
             collision = True
+
         # Check if max. number of steps is reached
         self.num_steps += 1
-        max_steps_reached = False
-        if self.num_steps >= 500:
-            max_steps_reached = True
+        max_steps_reached = self.num_steps >= config.ENV.MAX_STEPS
 
         # Sparse Reward
         if arrived_goal:
             reward = config.ENV.GOAL_REWARD
         elif collision:
            reward = config.ENV.CRASH_REWARD
-        # elif max_steps_reached:
-        #    reward = -1
+        elif max_steps_reached:
+           reward = config.ENV.MAX_STEPS_REWARD
         else:
             reward = 0
         observation = self._get_obs()

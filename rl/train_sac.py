@@ -2,8 +2,6 @@ from readline import parse_and_bind
 import gym
 import numpy as np
 import nav2D_envs
-import sys
-import shutil
 import argparse
 from stable_baselines3 import SAC
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
