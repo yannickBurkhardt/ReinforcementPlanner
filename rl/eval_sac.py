@@ -31,11 +31,9 @@ if __name__ == '__main__':
     # Arguments
     parser = argparse.ArgumentParser(
         description="Reinforcement Learning - based path planning")
-    parser.add_argument("--config-file", type=str,
-                        default="configs/sac_eval.yaml", required=False)
-    parser.add_argument("--model", type=str,
-                        default="experiments/12/sac_nav", required=False)
+    parser.add_argument("--experiment", type=str,
+                        default="20", required=False)
     args = parser.parse_args()
     print("\n Training SAC with configuration parameters: \n", config)
-    config.merge_from_file(args.config_file)
-    main(args.model)
+    config.merge_from_file("experiments/" + args.experiment + "/config.yaml")
+    main("experiments/" + args.experiment + "/sac_nav")

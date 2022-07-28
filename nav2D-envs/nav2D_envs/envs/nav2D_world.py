@@ -30,6 +30,10 @@ class Nav2DWorldEnv(gym.Env):
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
         self.velocity = np.array([0.0, 0.0])
         self.num_steps = 0
+        if config.ENV.MIXED_STATIC_DYNAMIC:
+            self.static_episode = True
+        else:
+            self.static_episode = False
 
         """self.observation_space = spaces.Dict(
             {
@@ -50,8 +54,17 @@ class Nav2DWorldEnv(gym.Env):
 
         # For examples/her/her_sac_gym_fetch_reach.py
         if self.dynamic_obstacles:
-            low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, low_obs_v, np.array([-self.max_vel]*2)))
-            high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, high_obs_v, np.array([-self.max_vel]*2)))
+            if config.ENV.CONSIDER_VELOCITIES:
+                low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, low_obs_v, np.array([-self.max_vel]*2)))
+                high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, high_obs_v, np.array([-self.max_vel]*2)))
+            else:
+                low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
+                high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
+
+            if config.ENV.CONSIDER_HISTORY: # Consider history of obstacle positions
+                low = np.hstack((low, low_obs_p))
+                high = np.hstack((high, high_obs_p))
+
         else:
             low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
             high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
@@ -151,7 +164,16 @@ class Nav2DWorldEnv(gym.Env):
             }
         else:
             if self.dynamic_obstacles:
-                obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),self.velocity))
+                if config.ENV.CONSIDER_VELOCITIES:
+                    obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),self.velocity))
+                else:
+                    obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity))
+                if config.ENV.CONSIDER_HISTORY:
+                    prev_dir_obs_sorted = self._prev_obs_dirs[sortidxs, np.arange(dir_obs.shape[1])[:,None]]
+                    prev_dir_obs_sorted = prev_dir_obs_sorted.T[:self.num_obs_considered]
+                    obs = np.hstack((obs, prev_dir_obs_sorted.flatten()))
+                    self._prev_obs_dirs = dir_obs
+
             else:
                 obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
         # Moving obstacles
@@ -205,13 +227,16 @@ class Nav2DWorldEnv(gym.Env):
         self._obstacles_positions = np.array(obstacles)
 
         # Set obstacle velocities
+        if config.ENV.MIXED_STATIC_DYNAMIC:
+            self.static_episode = self.np_random.uniform(0.0,1.0)>0.5
         # Static obstacles
-        if self.dynamic_obstacles:
+        if self.dynamic_obstacles and not self.static_episode:
             self._obstacles_vels = self.np_random.uniform(-self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, self.max_vel*config.ENV.OBSTACLES_SPEED_FACTOR, size=(self.num_obstacles,2))
         else:
             self._obstacles_vels = np.zeros((self.num_obstacles,2))
-
-        # Moving obstacles
+        
+        if config.ENV.CONSIDER_HISTORY:
+            self._prev_obs_dirs = np.zeros((self.num_obstacles,2))
 
         observation = self._get_obs()
         info = self._get_info()
@@ -225,7 +250,7 @@ class Nav2DWorldEnv(gym.Env):
         self._agent_location += action + self.np_random.normal(scale=self.variance_action_noise, size=action.size)
 
         # Move the obstacles
-        if self.dynamic_obstacles:
+        if self.dynamic_obstacles and not self.static_episode:
             #Mixed scenario
             if config.ENV.STEPS_MODE_SCENARIO > 0:
                 if self.num_steps % config.ENV.STEPS_MODE_SCENARIO == 0 and self.num_steps > 1:

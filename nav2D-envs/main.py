@@ -2,6 +2,10 @@ import nav2D_envs
 import gym
 import random
 import numpy as np
+from configs import config
+
+CONFIG_FILE = "/usr/src/app/rl/configs/sac.yaml"
+config.merge_from_file(CONFIG_FILE)
 
 env = gym.make('nav2D_envs/Nav2DWorld-v0')
 observation, info = env.reset(seed=42, return_info=True)

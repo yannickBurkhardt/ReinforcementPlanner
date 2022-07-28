@@ -20,8 +20,10 @@ def main():
     action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(2), sigma=config.MODEL.OUNOISE_SIGMA * np.ones(2))
     # Define Environment and Model
     env = gym.make('nav2D_envs/Nav2DWorld-v0')
-    model = SAC("MlpPolicy", env, train_freq=8, tensorboard_log=experiment_dir,verbose=1, action_noise=action_noise)
+    model = SAC("MlpPolicy", env, train_freq=8, tensorboard_log=experiment_dir,verbose=1, 
+                    action_noise=action_noise, learning_rate=config.TRAIN.LEARNING_RATE)                
     print("\n Model:", model.policy)
+    
     # Train and Save Model
     model.learn(total_timesteps=config.TRAIN.TOTAL_STEPS, log_interval=10)
     model.save(experiment_dir+"/sac_nav")
