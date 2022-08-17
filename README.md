@@ -1,5 +1,7 @@
 # tum-adlr-ss22-07
 
+![reinforcement_planning](https://user-images.githubusercontent.com/18732666/185097549-46c79b1c-cd81-4cd3-9c59-f7219dafdd54.gif)
+
 ## Install using Docker
 
 1. Install Docker following the instructions on the [link](https://docs.docker.com/engine/install/ubuntu/) and [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) (for gpu support).
