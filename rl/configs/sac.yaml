@@ -7,7 +7,7 @@ ENV:
   CONSIDER_HISTORY: False   # Consider History of Obstacle Positions
   MIXED_STATIC_DYNAMIC: True
   OBSTACLES_SPEED_FACTOR: 0.75
-  NUM_PAST_ACTIONS: 10
+  NUM_PAST_ACTIONS: 10   # Number of past actions to be considered in observation space
 
   GOAL_REWARD: 1.0
   CRASH_REWARD: 0.0
@@ -15,7 +15,7 @@ ENV:
   VARIANCE_OBSERVATION_NOISE: 0.0
   VARIANCE_ACTION_NOISE: 0.0
 
-  STEPS_MODE_SCENARIO: 16
+  STEPS_MODE_SCENARIO: 16    # Number of steps before randomly changing obstacles' speeds
   MOTION_MODEL: 'holonomic' #Options: 'holonomic', 'differential'
   DEBUG: False
 
