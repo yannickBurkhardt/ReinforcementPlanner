@@ -1,0 +1,28 @@
+ENV:
+  TOTAL_OBSTACLES: 10
+  SEEN_OBSTACLES: 10
+  MAX_VEL: 10.0
+  DYNAMIC_OBSTACLES: True
+  CONSIDER_VELOCITIES: True
+  CONSIDER_HISTORY: False   # Consider History of Obstacle Positions
+  MIXED_STATIC_DYNAMIC: True
+  OBSTACLES_SPEED_FACTOR: 0.75
+  NUM_PAST_ACTIONS: 10   # Number of past actions to be considered in observation space
+
+  GOAL_REWARD: 1.0
+  CRASH_REWARD: 0.0
+
+  VARIANCE_OBSERVATION_NOISE: 0.0
+  VARIANCE_ACTION_NOISE: 0.0
+
+  STEPS_MODE_SCENARIO: 16    # Number of steps before randomly changing obstacles' speeds
+  MOTION_MODEL: 'holonomic' #Options: 'holonomic', 'differential'
+  DEBUG: False
+
+MODEL:
+  OUNOISE_SIGMA: 0.1
+
+TRAIN:
+  ALGORITHM: 'sac'
+  TOTAL_STEPS: 6000000
+  LEARNING_RATE: 0.00003

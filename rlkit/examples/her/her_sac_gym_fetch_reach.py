@@ -98,12 +98,12 @@ if __name__ == "__main__":
         version='normal',
         algo_kwargs=dict(
             batch_size=128,
-            num_epochs=100,
+            num_epochs=1000,
             num_eval_steps_per_epoch=5000,
             num_expl_steps_per_train_loop=1000,
             num_trains_per_train_loop=1000,
             min_num_steps_before_training=1000,
-            max_path_length=50,
+            max_path_length=100,
         ),
         sac_trainer_kwargs=dict(
             discount=0.99,

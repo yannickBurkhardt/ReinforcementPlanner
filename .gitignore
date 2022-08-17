@@ -7,3 +7,7 @@ google-cloud-sdk
 *.npy
 *.npz
 *.ipynb_checkpoints*
+banana_RL
+rl/experiments/old_sac/*
+rl/old
+.vscode

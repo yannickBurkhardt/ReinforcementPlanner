@@ -100,3 +100,4 @@ fi
 cd /usr/src/app
 pip install -e nav2D-envs/
 pip install -e rlkit/
+cd /usr/src/app/rl

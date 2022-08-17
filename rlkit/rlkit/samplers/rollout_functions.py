@@ -25,7 +25,7 @@ def multitask_rollout(
         wrapped_fun = None
 
     def obs_processor(o):
-        return np.hstack((o[observation_key], o[desired_goal_key]))
+        return o #np.hstack((o[observation_key], o[desired_goal_key]))
 
     paths = rollout(
         env,
@@ -37,8 +37,8 @@ def multitask_rollout(
         preprocess_obs_for_policy_fn=obs_processor,
         full_o_postprocess_func=wrapped_fun,
     )
-    if not return_dict_obs:
-        paths['observations'] = paths['observations'][observation_key]
+    #if not return_dict_obs:
+    #    paths['observations'] = paths['observations'][observation_key]
     return paths
 
 

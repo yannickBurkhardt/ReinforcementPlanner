@@ -1,3 +1,4 @@
+numpy
 jupyterlab
 matplotlib
 opencv-python
@@ -21,3 +22,5 @@ cloudpickle
 gitpython
 gtimer
 ipdb
+
+stable-baselines3[extra]
