@@ -2,16 +2,8 @@
 
 ## Install
 
-### Docker
-1. Install Docker following the instructions on the [link](https://docs.docker.com/engine/install/ubuntu/) and [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) (for gpu support).
-
-3. Clone this repo
-
-4. Build Docker Container
-    ```bash
-    docker build . -t reinforcement_planning
-    ```
 ### In host machine (with conda)
+
 1. Create conda environment
     ```bash
     conda create -n "reinforcement_planning" python=3.8.10
@@ -38,11 +30,32 @@
     python -m pip install -e rlkit/
     ```
 
+### Docker
+1. Install Docker following the instructions on the [link](https://docs.docker.com/engine/install/ubuntu/) and [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) (for gpu support).
 
-## Run (Needs nvidia-docker and the right Nvidia GPU drivers)
+3. Clone this repo
+
+4. Build Docker Container
+    ```bash
+    docker build . -t reinforcement_planning
+    ```
+
+5. Run (Needs nvidia-docker and the right Nvidia GPU drivers)
 ```bash
 source run_docker.sh 
 ```
+
+## Train
+```
+cd rlkit
+python algorithms/sac.py
+```
+
+## Run policy
+```
+python run_goal_conditioned_policy.py <path-to-experiment-snapshot/params.pkl>
+```
+
 
 
 
