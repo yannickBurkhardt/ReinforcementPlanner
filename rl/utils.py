@@ -22,5 +22,5 @@ def save_configs(config: Node, save_path: str) -> None:
     """
     with open(save_path + "/config.yaml", "w") as f:
         f.write(config.dump())
-    shutil.copyfile("train_sac.py", save_path + "/train_sac.py")
+    shutil.copyfile("train.py", save_path + "/train.py")
     shutil.copyfile("../nav2D-envs/nav2D_envs/envs/nav2D_world.py", save_path + "/nav2D_world.py")

@@ -3,11 +3,19 @@ from gym import spaces
 import pygame
 import numpy as np
 from configs import config
-
+from math import sin, cos, atan2, pi
+import os
+from pathlib import Path
+import glob
+import shutil
 class Nav2DWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 16}
 
     def __init__(self, size=512, dict_obs_space=False):
+        if config.ENV.MOTION_MODEL == "holonomic":
+            self.state_space_dim = 2
+        elif config.ENV.MOTION_MODEL == "differential":
+            self.state_space_dim = 3
         self.dynamic_obstacles = config.ENV.DYNAMIC_OBSTACLES
         self.dict_obs_space = dict_obs_space
         self.size = size  # The size of the square grid
@@ -28,7 +36,7 @@ class Nav2DWorldEnv(gym.Env):
         high_obs_v = np.array([self.max_vel] * 2 * self.num_obs_considered)
         #low_obs_size = np.array([self.obs_max_size] * self.num_obstacles)
         #high_obs_size = np.array([self.obs_min_size] * self.num_obstacles)
-        self.velocity = np.array([0.0, 0.0])
+        self.velocity = [0.0, 0.0]*config.ENV.NUM_PAST_ACTIONS
         self.num_steps = 0
         if config.ENV.MIXED_STATIC_DYNAMIC:
             self.static_episode = True
@@ -55,19 +63,24 @@ class Nav2DWorldEnv(gym.Env):
         # For examples/her/her_sac_gym_fetch_reach.py
         if self.dynamic_obstacles:
             if config.ENV.CONSIDER_VELOCITIES:
-                low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, low_obs_v, np.array([-self.max_vel]*2)))
-                high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, high_obs_v, np.array([-self.max_vel]*2)))
+                low = np.hstack((np.array([-2.0]*self.state_space_dim), np.array([-2.0, -2.0]), low_obs_p, low_obs_v, np.array([-self.max_vel]*2*config.ENV.NUM_PAST_ACTIONS)))
+                high = np.hstack((np.array([2.0]*self.state_space_dim), np.array([2.0, 2.0]), high_obs_p, high_obs_v, np.array([-self.max_vel]*2*config.ENV.NUM_PAST_ACTIONS)))
             else:
-                low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
-                high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
+                low = np.hstack((np.array([-2.0]*self.state_space_dim), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*config.ENV.NUM_PAST_ACTIONS)))
+                high = np.hstack((np.array([2.0]*self.state_space_dim), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*config.ENV.NUM_PAST_ACTIONS)))
 
             if config.ENV.CONSIDER_HISTORY: # Consider history of obstacle positions
                 low = np.hstack((low, low_obs_p))
                 high = np.hstack((high, high_obs_p))
 
         else:
-            low = np.hstack((np.array([-2.0, -2.0]), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2)))
-            high = np.hstack((np.array([2.0, 2.0]), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2)))
+            low = np.hstack((np.array([-2.0]*self.state_space_dim), np.array([-2.0, -2.0]), low_obs_p, np.array([-self.max_vel]*2*config.ENV.NUM_PAST_ACTIONS)))
+            high = np.hstack((np.array([2.0]*self.state_space_dim), np.array([2.0, 2.0]), high_obs_p, np.array([-self.max_vel]*2*config.ENV.NUM_PAST_ACTIONS)))
+        # include angle to goal for differential motion model
+        if config.ENV.MOTION_MODEL == "differential":
+            low = np.hstack((low, np.array([-2.0])))
+            high = np.hstack((high, np.array([2.0])))
+        
         """self.observation_space = spaces.Dict(
             {
                 'observation': spaces.Box(low=low, high=high, dtype=np.float32),
@@ -92,33 +105,11 @@ class Nav2DWorldEnv(gym.Env):
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         # self.action_space = spaces.Box(0, 4, shape=(1,), dtype=np.int16)
-        self.action_space = spaces.Box(np.array([-self.max_vel]*2), np.array([self.max_vel]*2), dtype=np.float32)
+        if config.ENV.MOTION_MODEL == "holonomic":
+            self.action_space = spaces.Box(np.array([-self.max_vel]*2), np.array([self.max_vel]*2), dtype=np.float32)
+        elif config.ENV.MOTION_MODEL == "differential":
+            self.action_space = spaces.Box(np.array([0.0,-self.max_vel]), np.array([self.max_vel]*2), dtype=np.float32)
 
-
-        """
-        The following dictionary maps abstract actions from `self.action_space` to 
-        the direction we will walk in if that action is taken.
-        I.e. 0 corresponds to "right", 1 to "up" etc.
-        """
-        """self._action_to_direction = {
-            0: np.array([1, 0]),
-            1: np.array([0, 1]),
-            2: np.array([-1, 0]),
-            3: np.array([0, -1]),
-            4: np.array([0, 0]) # Should never happen
-        }"""
-        """self._action_to_direction = {
-            0: np.array([0, 0]),
-            1: np.array([1, 0]),
-            2: np.array([1, 1]),
-            3: np.array([0, 1]),
-            4: np.array([-1, 1]),
-            5: np.array([-1, 0]),
-            6: np.array([-1, -1]),
-            7: np.array([0, -1]),
-            8: np.array([-1, -1]),
-        }"""
-        
 
         """
         If human-rendering is used, `self.window` will be a reference
@@ -131,6 +122,12 @@ class Nav2DWorldEnv(gym.Env):
         self.clock = None
         print("Created envirnoment with {} obstacles from which {} are seen by the agent".format(self.num_obstacles, self.num_obs_considered))
         print("Noise variances are: {} and {}".format(self.variance_action_noise, self.variance_observation_noise))
+        self.current_step = 0
+        # Save images for debug
+        if config.ENV.DEBUG:
+            Path(config.TRAIN.OUT_DIR+"/images").mkdir(parents=True, exist_ok=True)
+            self.current_dir = None
+
     def _get_obs(self):
         #return {"agent": self._agent_location}, "target": self._target_location, "obstacles_pos": self._obstacles_positions, "obstacles_vel": self._obstacles_vels}
         # Static obstacles
@@ -138,8 +135,8 @@ class Nav2DWorldEnv(gym.Env):
                          self._obstacles_size))"""
 
         # Calculate relative observations
-        dir_goal = self._target_location - self._agent_location
-        dir_obs = self._obstacles_positions - self._agent_location
+        dir_goal = self._target_location - self._agent_location[:2]
+        dir_obs = self._obstacles_positions - self._agent_location[:2]
         # Find collision point
 
         dir_obs -= dir_obs / np.linalg.norm(dir_obs, axis=1)[:, np.newaxis] * (self.agent_size + self._obstacles_size)[:, np.newaxis]
@@ -165,9 +162,9 @@ class Nav2DWorldEnv(gym.Env):
         else:
             if self.dynamic_obstacles:
                 if config.ENV.CONSIDER_VELOCITIES:
-                    obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),self.velocity))
+                    obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),vels_sorted.flatten(),np.array([self.velocity]).flatten()))
                 else:
-                    obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),self.velocity))
+                    obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(),np.array([self.velocity]).flatten()))
                 if config.ENV.CONSIDER_HISTORY:
                     prev_dir_obs_sorted = self._prev_obs_dirs[sortidxs, np.arange(dir_obs.shape[1])[:,None]]
                     prev_dir_obs_sorted = prev_dir_obs_sorted.T[:self.num_obs_considered]
@@ -175,10 +172,12 @@ class Nav2DWorldEnv(gym.Env):
                     self._prev_obs_dirs = dir_obs
 
             else:
-                obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), self.velocity))
+                obs = np.hstack((self._agent_location, dir_goal, dir_obs_closest.flatten(), np.array([self.velocity]).flatten()))
         # Moving obstacles
         # obs = np.hstack((self._agent_location, self._target_location, self._obstacles_positions.flatten(), self._obstacles_vels.flatten(), self._obstacles_size))
-        
+        # if config.ENV.MOTION_MODEL == 'differential':
+        #     angle_dir = (atan2(dir_goal[1], dir_goal[0]) - self._agent_location[2]*pi)/pi
+        #     obs = np.hstack((obs, angle_dir))
         # Add Gaussian noise to agent position, goal position and obstacle positions
         num_noisy_elements = obs.shape[0]
         noise = np.zeros(obs.size)
@@ -190,7 +189,7 @@ class Nav2DWorldEnv(gym.Env):
     def _get_info(self):
         return {
             "distance": np.linalg.norm(
-                self._agent_location - self._target_location, ord=1
+                self._agent_location[:2] - self._target_location, ord=1
             )
         }
     
@@ -205,13 +204,13 @@ class Nav2DWorldEnv(gym.Env):
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.uniform(-1.0, 1.0, size=2)
+        self._agent_location = self.np_random.uniform(-1.0, 1.0, size=self.state_space_dim)
         # self._agent_location = np.array([self.size,0])
 
 
         # We will sample the target's location randomly until it does not coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.linalg.norm(self._target_location - self._agent_location) < 2.0 * self.agent_size:
+        self._target_location = self._agent_location[:2]
+        while np.linalg.norm(self._target_location - self._agent_location[:2]) < 2.0 * self.agent_size:
             self._target_location = self.np_random.uniform(-1.0, 1.0, size=2)
 
         # Sample the obstacles' radius randomly
@@ -220,8 +219,8 @@ class Nav2DWorldEnv(gym.Env):
         # Sample the obstacles' locations randomly until it does not coincide with the agent's location or the targe location
         obstacles = []
         for i in range(self.num_obstacles):
-            obs_location = self._agent_location
-            while((np.linalg.norm(obs_location - self._agent_location) < 2*(self.agent_size + self._obstacles_size[i])) or (np.linalg.norm(obs_location - self._target_location) < 2*(self.agent_size + self._obstacles_size[i]))):
+            obs_location = self._agent_location[:2]
+            while((np.linalg.norm(obs_location - self._agent_location[:2]) < 2*(self.agent_size + self._obstacles_size[i])) or (np.linalg.norm(obs_location - self._target_location) < 2*(self.agent_size + self._obstacles_size[i]))):
                 obs_location = self.np_random.uniform(-1.0, 1.0, size=2)
             obstacles.append(obs_location)
         self._obstacles_positions = np.array(obstacles)
@@ -240,14 +239,44 @@ class Nav2DWorldEnv(gym.Env):
 
         observation = self._get_obs()
         info = self._get_info()
+
+        if config.ENV.DEBUG:
+            files = glob.glob(config.TRAIN.OUT_DIR+"/images/*")
+            if len(files)>0:
+                max_file = max(files)
+            else:
+                max_file = "000"
+            self.current_dir = config.TRAIN.OUT_DIR+"images/{:02d}".format(int(max_file.split('/')[-1].split('_')[0])+1)
+            print(self.current_dir)
+            os.mkdir(self.current_dir)
+        self.current_step = 0
         return (observation, info) if return_info else observation
 
     def step(self, action):
         
         # Current velocity measurement is equal to the action plus some measurement noise
-        self.velocity = action 
+        self.velocity.pop(0)
+        self.velocity.pop(0)
+
+        self.velocity.append(action[0])
+        self.velocity.append(action[1]) 
+
         # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location += action + self.np_random.normal(scale=self.variance_action_noise, size=action.size)
+        action += self.np_random.normal(scale=self.variance_action_noise, size=action.size)
+        
+        if config.ENV.MOTION_MODEL == "holonomic":
+            self._agent_location += action + self.np_random.normal(scale=self.variance_action_noise, size=action.size)
+        elif config.ENV.MOTION_MODEL == "differential":
+            if action[0] < 0.0:
+                action[0] = 0.0
+            self._agent_location[:2] += action[0]*np.array([cos(self._agent_location[2]*pi), sin(self._agent_location[2]*pi)])
+            # self._agent_location[:2] += action[0]*np.array([0,1])
+
+            # self._agent_location[:2] += action[0]*np.array([sin(self._agent_location[2]), cos(self._agent_location[2])])
+
+            self._agent_location[2] += action[1]*5.0 #TODO: check how to limit rotation velocity
+            # keep between -pi and pi
+            self._agent_location[2] = atan2(sin(self._agent_location[2]*pi), cos(self._agent_location[2]*pi))/pi
 
         # Move the obstacles
         if self.dynamic_obstacles and not self.static_episode:
@@ -271,10 +300,10 @@ class Nav2DWorldEnv(gym.Env):
                     # self._obstacles_positions[i] = np.clip(self._obstacles_positions[i] + np.int16(self._obstacles_vels[i]), self._obstacles_size[i], self.size - self._obstacles_size[i])
 
         # An episode is done iff the agent has reached the target or crashed into an obstacle
-        arrived_goal = np.linalg.norm(self._agent_location-self._target_location) < 2*self.agent_size
+        arrived_goal = np.linalg.norm(self._agent_location[:2]-self._target_location) < 2*self.agent_size
         # Check for collisions
         collision = False
-        if(any(np.linalg.norm(self._agent_location - self._obstacles_positions, axis=1) < 2 * (self.agent_size + self._obstacles_size))):
+        if(any(np.linalg.norm(self._agent_location[:2] - self._obstacles_positions, axis=1) < 2 * (self.agent_size + self._obstacles_size))):
             collision = True
 
         # Check for out of boundaries
@@ -302,7 +331,8 @@ class Nav2DWorldEnv(gym.Env):
         # Reset steps
         if done:
             self.num_steps = 0
-            self.velocity = np.array([0, 0])
+            self.velocity = [0, 0]*config.ENV.NUM_PAST_ACTIONS
+        self.current_step += 1
         return observation, reward, done, info
 
     def render(self, mode="human"):
@@ -332,9 +362,17 @@ class Nav2DWorldEnv(gym.Env):
         pygame.draw.circle(
             canvas,
             (0, 0, 255),
-            ((self._agent_location+1.0)/2*self.size),
+            ((self._agent_location[:2]+1.0)/2*self.size),
             pix_square_size,
         )
+        if config.ENV.MOTION_MODEL == "differential":
+            pygame.draw.line(
+                canvas,
+                (0,0,0),
+                ((self._agent_location[:2]+1.0)/2*self.size),
+                (self._agent_location[:2]+1.0)/2*self.size + (np.array([cos(self._agent_location[2]*pi), sin(self._agent_location[2]*pi)])*self.agent_size*self.size),
+                4
+                )
 
         # Finally, add obstacles
         for i, obs_pos in enumerate(self._obstacles_positions):
@@ -367,6 +405,8 @@ class Nav2DWorldEnv(gym.Env):
             self.window.blit(canvas, canvas.get_rect())
             pygame.event.pump()
             pygame.display.update()
+            if config.ENV.DEBUG and self.current_dir is not None and self.current_step % 2 == 0:
+                pygame.image.save( self.window, self.current_dir + '/{:03d}.png'.format(self.current_step) )
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to keep the framerate stable.

@@ -16,6 +16,10 @@ _C.ENV.CONSIDER_HISTORY = False
 _C.ENV.MIXED_STATIC_DYNAMIC = False
 _C.ENV.OBSTACLES_SPEED_FACTOR = 0.75
 _C.ENV.MAX_STEPS = 500
+_C.ENV.MOTION_MODEL = "holonomic"
+_C.ENV.DEBUG = True
+_C.ENV.NUM_PAST_ACTIONS = 1
+
 
 # Only if ENV_DIFFERENT_OBS_SIZES is True:
 _C.ENV.OBS_MIN_SIZE = 5
@@ -42,6 +46,7 @@ _C.MODEL.OUNOISE_SIGMA = 0.1
 # Train definition
 # -----------------------------------------------------------------------------
 _C.TRAIN = Node()
+_C.TRAIN.ALGORITHM = 'sac'
 _C.TRAIN.LEARNING_RATE = 3e-4
 _C.TRAIN.OUT_DIR = 'experiments/'
 _C.TRAIN.TOTAL_STEPS = 4000000

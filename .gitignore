@@ -8,6 +8,6 @@ google-cloud-sdk
 *.npz
 *.ipynb_checkpoints*
 banana_RL
-rl/experiments/*
+rl/experiments/old_sac/*
 rl/old
 .vscode
